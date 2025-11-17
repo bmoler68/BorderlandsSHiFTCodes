@@ -2,11 +2,15 @@
 
 An Android application for viewing and managing Borderlands SHiFT codes. This unofficial fan project provides easy access to SHiFT codes for all Borderlands games.
 
+
+
 ## 🤖 About This Project
 
 This application was completely written and is maintained using AI-assisted development tools as a personal project in AI application development. The entire codebase, architecture, and documentation were created with the assistance of AI coding agents, demonstrating modern AI-powered software development workflows. This project serves as both a functional application for the Borderlands community and a personal project in exploring AI-assisted development practices.
 
 **Contribution Policy:** Since this application is an experiment in AI development, contributions are not currently being accepted. This allows the project to remain completely AI-developed and maintained, which is central to the experimental nature of this project. However, you are free to clone the repository and create your own forks or modifications for personal use.
+
+
 
 ## 🎮 Features
 
@@ -49,6 +53,8 @@ This application was completely written and is maintained using AI-assisted deve
 - ⏰ **Expiration Time Display** showing exact expiration time on shift code cards
 - 📦 **Compact View Mode** for ultra-efficient code browsing (shows 3x more codes)
 - 🎚️ **View Toggle** switchable between normal and compact card layouts
+
+
 
 ## 📋 Release History
 
@@ -147,6 +153,8 @@ This application was completely written and is maintained using AI-assisted deve
 - Responsive design for all screen sizes and orientations
 - One-tap code copying and direct SHiFT website access
 
+
+
 ## 🚀 Getting Started
 
 ### 📋 Requirements
@@ -206,6 +214,8 @@ The app requires the following permissions to function properly:
    - Connect Android device or start emulator
    - Click the Run button or use `Shift + F10`
 
+
+
 ## 🔐 Secrets Configuration
 
 This application requires a `secrets.properties` file to store configuration URLs. This file is intentionally excluded from version control (via `.gitignore`) to keep sensitive URLs private.
@@ -249,6 +259,8 @@ The app expects CSV data from URLs that return CSV-formatted content. Common sou
 - Any web server hosting CSV files
 
 See the [CSV File Format](#-csv-file-format) section below for the expected format.
+
+
 
 ## 📊 CSV File Format
 
@@ -317,12 +329,16 @@ All times are interpreted as **Eastern Time (ET)** for expiration calculations.
 - Invalid date formats cause the row to be skipped
 - The parser is tolerant of extra columns (they are ignored)
 
+
+
 ## 📄 Legal Notice
 
 **Unofficial Fan Project**  
 **No affiliation with Gearbox Software or 2K Games**
 
 This is an unofficial fan project created for the Borderlands community. The application is not affiliated with, endorsed by, or sponsored by Gearbox Software, 2K Games, or any of their subsidiaries.
+
+
 
 ## 📚 Open Source Licenses
 
@@ -378,6 +394,8 @@ Licensed under the [MIT License](https://opensource.org/licenses/MIT)
 - `org.robolectric:robolectric` (4.16) - Robolectric for Android framework testing
 - `org.mockito:mockito-core` (5.20.0) - Mockito for mocking in tests
 - `org.mockito:mockito-inline` (5.2.0) - Mockito inline for final classes
+
+
 
 ## 📜 License
 
