@@ -244,6 +244,8 @@ This application requires a `secrets.properties` file to store configuration URL
    - `privacy.policy.url` (required): URL to your privacy policy page
    - `about.page.url` (required): URL to your about page
 
+> **Development Note:** The primary and fallback CSV URL configuration was created because of the Google Sheets CSV implementation. Google Sheets may not always reliably serve CSV exports, so a fallback option was implemented in the app to automatically switch to a self-hosted version of the CSV file when Google Sheets fails to load. This ensures the app continues to function even when the primary data source is unavailable.
+
 ### How It Works
 
 - The `secrets.properties` file is loaded at app startup from `app/src/main/assets/`
