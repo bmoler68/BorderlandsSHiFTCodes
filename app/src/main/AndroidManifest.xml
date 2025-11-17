@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+    Android Manifest for the Borderlands SHiFT Codes application
+    
+    This manifest file defines the application's configuration, permissions,
+    and components. It specifies:
+    - Required permissions for network access
+    - Application metadata and configuration
+    - Main activity declaration and intent filters
+    - Security and backup configuration
+    - Network security settings
+    
+    The manifest follows Android best practices for security, performance,
+    and user experience.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 
+        Internet permission required for fetching SHiFT codes from external APIs
+        This permission allows the app to make network requests to retrieve
+        the latest SHiFT codes and their expiration dates.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    
+    <!-- 
+        Notification permission for Android 13+ devices
+        Required to show notifications for new SHiFT codes
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- 
+        Wake lock permission for background sync
+        Allows WorkManager to perform sync operations when device is sleeping
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- 
+        Application configuration and metadata
+        This section defines the app's behavior, appearance, and security settings
+        
+        Allow Android to backup and restore app data
+        This enables users to restore their app data when switching devices
+        or reinstalling the application.
+        
+        Data extraction rules for Android 12+ devices
+        Defines which data can be extracted during device setup and migration
+        
+        Backup rules configuration
+        Specifies which app data should be included in device backups
+        
+        Application icon displayed in launcher and settings
+        Uses the standard launcher icon for consistent branding
+        
+        Application name displayed to users
+        References the localized string resource for multi-language support
+        
+        Round icon for devices with circular icon support
+        Provides consistent icon appearance across different device types
+        
+        Support for right-to-left (RTL) languages
+        Enables proper text layout for languages like Arabic and Hebrew
+        
+        Application theme for consistent visual appearance
+        Applies the custom Borderlands theme throughout the application
+        
+        Network security configuration
+        Defines security policies for network connections and API calls
+        
+        Disable cleartext (HTTP) traffic for security
+        Forces all network communication to use encrypted HTTPS connections
+        
+        Target API level specification
+        Indicates the app is designed for Android 12 (API 31) and above
+    -->
+    <application
+        android:name="com.brianmoler.borderlandsshiftcodes.BorderlandsShiftCodesApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.BorderlandsSHiFTCodes"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="31">
+        
+        <!-- 
+            Main activity declaration
+            This is the entry point of the application that users see when launching
+            
+            Fully qualified class name of the main activity
+            Points to the MainActivity class that handles the app's main UI
+            
+            Export flag for external access
+            Set to true to allow other apps to launch this activity
+            
+            Theme applied to this specific activity
+            Ensures consistent visual appearance with the app's theme
+            
+            Intent filter for launcher integration
+            This makes the activity appear in the device's app launcher
+            and allows users to launch the app from the home screen
+            
+            Main action declaration
+            Indicates this is the main entry point of the application
+            
+            Launcher category
+            Places the app in the device's app launcher alongside other apps
+        -->
+        <activity
+            android:name="com.brianmoler.borderlandsshiftcodes.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BorderlandsSHiFTCodes">
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
