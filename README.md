@@ -198,7 +198,7 @@ The app requires the following permissions to function properly:
 2. **Create the secrets configuration file**
    - Copy `app/src/main/assets/secrets.properties.example` to `app/src/main/assets/secrets.properties`
    - Edit `secrets.properties` and fill in your actual URL values:
-     - `csv.url`: URL to your primary CSV data source (e.g., Google Sheets CSV export URL)
+     - `csv.url`: URL to your primary CSV data source (e.g., Google Sheets CSV URL)
      - `csv.fallback.url`: URL to your fallback CSV data source
      - `privacy.policy.url`: URL to your privacy policy page
      - `about.page.url`: URL to your about page
@@ -244,7 +244,7 @@ This application requires a `secrets.properties` file to store configuration URL
    - `privacy.policy.url` (required): URL to your privacy policy page
    - `about.page.url` (required): URL to your about page
 
-> **Development Note:** The primary and fallback CSV URL configuration was created because of the Google Sheets CSV implementation. Google Sheets may not always reliably serve CSV exports, so a fallback option was implemented in the app to automatically switch to a self-hosted version of the CSV file when Google Sheets fails to load. This ensures the app continues to function even when the primary data source is unavailable.
+> **Development Note:** The primary and fallback CSV URL configuration was created because of the Google Sheets CSV implementation. Google Sheets may not always reliably serve a published CSV, so a fallback option was implemented in the app to automatically switch to a self-hosted version of the CSV file when Google Sheets fails to load. This ensures the app continues to function even when the primary data source is unavailable.
 
 ### How It Works
 
@@ -256,13 +256,13 @@ This application requires a `secrets.properties` file to store configuration URL
 ### CSV Data Sources
 
 The app expects CSV data from URLs that return CSV-formatted content. Common sources include:
-- Google Sheets (export as CSV)
+- Google Sheets (published CSV)
 - GitHub raw files
 - Any web server hosting CSV files
 
 See the [CSV File Format](#-csv-file-format) section below for the expected format.
 
-
+> **Development Note:** For the primary CSV data, I prefer to use Google Sheets published as a CSV formatted file.  This made it easy for me to create a published Google Form for that sheet to easily maintain SHiFT code data from a simple online form from my mobile browser.  I then have a self-published CSV file that I maintain on my own server as a fallback URL, as Google Sheets can sometimes be unreliable.  However, you may use any CSV formatted file for both the primary and fallback URL, so long as the file follows the proper format.
 
 ## 📊 CSV File Format
 
