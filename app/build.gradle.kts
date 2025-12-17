@@ -38,9 +38,9 @@ android {
         // Target Android version for optimization
         targetSdk = 36
         // Internal version number for Play Store updates
-        versionCode = 10600
+        versionCode = 10700
         // User-visible version name
-        versionName = "1.6.0"
+        versionName = "1.7.0"
 
         // Test runner for instrumented tests
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

@@ -833,9 +833,6 @@ fun CompactShiftCodeCard(
         else -> BorderlandsActiveColor
     }
     
-    // Status dot color - use the same color as the left border for consistency and visibility
-    val statusDotColor = statusColor
-    
     // Compact expiration display (MM/dd format)
     val expirationDisplay = when {
         isNonExpiring -> "Never"
@@ -902,18 +899,11 @@ fun CompactShiftCodeCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                // First line: Status dot + Code + Copy button + Redemption icon + Expiration
+                // First line: Code + Copy button + Redemption icon + Expiration
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Status dot
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .background(statusDotColor, shape = CircleShape)
-                    )
-                    
                     // Code text
                     Text(
                         text = shiftCode.code,
