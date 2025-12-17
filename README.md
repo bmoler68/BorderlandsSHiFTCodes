@@ -58,7 +58,15 @@ This application was completely written and is maintained using AI-assisted deve
 
 ## 📋 Release History
 
-### v1.6.0 - Latest Release
+### v1.7.0 - Latest Release
+**Maintenance & UI Improvements:** Updated build configuration/tooling and refined compact-view layout to improve readability.
+
+- **Updated:** Target/compile SDK updated to **API 36**
+- **Enhanced:** Release builds now enable **code minification** and **resource shrinking** for smaller APKs
+- **Fixed:** Removed the redundant **status dot** in **compact view** to prevent SHiFT code text from being truncated
+- **Maintained:** Full backward compatibility with existing functionality
+
+### v1.6.0
 **Open Source Release:** Application is now open source under the MIT License.
 
 - **New:** Open source release with MIT License
@@ -163,7 +171,7 @@ Before installing and running the application, ensure your device meets the foll
 
 #### Device Requirements
 - **Minimum Android Version**: Android 7.0 (API level 24)
-- **Target Android Version**: Android 14 (API level 36)
+- **Target Android Version**: Android 16 (API level 36)
 - **RAM**: Minimum 2GB RAM recommended for optimal performance
 - **Storage**: ~50MB free space for installation
 - **Network**: Internet connection required for fetching SHiFT codes
@@ -181,7 +189,7 @@ The app requires the following permissions to function properly:
   - *Privacy*: No personal data is accessed; only syncs public SHiFT code data
 
 #### Development Requirements (for developers)
-- **Android Studio**: Iguana (2024.1.1) or later (required for Android Gradle Plugin 8.13.1)
+- **Android Studio**: Iguana (2024.1.1) or later (required for Android Gradle Plugin 8.13.2)
 - **Gradle**: 9.2.0 (as specified in gradle-wrapper.properties)
 - **Java**: JDK 11 or later
 - **Kotlin**: 2.2.21 (as specified in libs.versions.toml)
@@ -381,7 +389,7 @@ Licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 **Development Tools:**
 - Kotlin language features and compiler (2.2.21)
-- Android Gradle Plugin (8.13.1)
+- Android Gradle Plugin (8.13.2)
 
 ### Eclipse Public License 1.0
 Licensed under [EPL 1.0](https://www.eclipse.org/legal/epl-v10.html)
