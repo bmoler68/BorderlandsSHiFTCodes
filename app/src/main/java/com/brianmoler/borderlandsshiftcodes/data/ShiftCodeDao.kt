@@ -30,6 +30,16 @@ interface ShiftCodeDao {
      */
     @Query("""
         SELECT * FROM shift_codes 
+        ORDER BY expiration DESC
+    """)
+    suspend fun getAllCodesSync(): List<ShiftCodeEntity>
+
+    /**
+     * Gets all active SHiFT codes as a suspend function.
+     * @return List of all active ShiftCodeEntity objects
+     */
+    @Query("""
+        SELECT * FROM shift_codes 
         WHERE isDeleted = 0 
         ORDER BY expiration DESC
     """)
@@ -78,13 +88,6 @@ interface ShiftCodeDao {
      */
     @Query("UPDATE shift_codes SET isDeleted = 1, lastUpdated = :timestamp WHERE code IN (:codes)")
     suspend fun softDeleteMultiple(codes: List<String>, timestamp: Long = System.currentTimeMillis())
-
-    /**
-     * Restores a soft-deleted SHiFT code by marking it as not deleted.
-     * @param code The SHiFT code string to restore
-     */
-    @Query("UPDATE shift_codes SET isDeleted = 0, lastUpdated = :timestamp WHERE code = :code")
-    suspend fun restoreDeleted(code: String, timestamp: Long = System.currentTimeMillis())
 
     /**
      * Soft deletes SHiFT codes by their IDs.

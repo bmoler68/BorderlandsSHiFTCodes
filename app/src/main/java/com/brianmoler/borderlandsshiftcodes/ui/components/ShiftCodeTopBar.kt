@@ -20,8 +20,8 @@ fun ShiftCodeTopBar(
     screenSize: ScreenSize,
     onRefresh: () -> Unit,
     onMenuClick: () -> Unit,
-    isSyncing: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSyncing: Boolean = false
 ) {
     Card(
         colors = CardDefaults.cardColors(

@@ -209,7 +209,9 @@ class ExampleUnitTest {
 
         // Test that division by zero throws exception
         assertThrows(ArithmeticException::class.java) {
+            @Suppress("DIVISION_BY_ZERO")
             val result = 10 / 0 // This should throw ArithmeticException
+            result
         }
     }
 }

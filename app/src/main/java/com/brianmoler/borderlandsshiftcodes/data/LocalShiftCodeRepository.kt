@@ -34,6 +34,14 @@ class LocalShiftCodeRepository(
     }
 
     /**
+     * Gets all SHiFT codes including soft-deleted ones.
+     * @return List of all ShiftCodeEntity objects
+     */
+    suspend fun getAllCodesSync(): List<ShiftCodeEntity> {
+        return shiftCodeDao.getAllCodesSync()
+    }
+
+    /**
      * Gets all unredeemed SHiFT codes as a Flow.
      * @return Flow of unredeemed ShiftCodeEntity objects
      */
@@ -85,15 +93,6 @@ class LocalShiftCodeRepository(
             shiftCodeDao.softDeleteMultiple(codes)
             Log.d(TAG, "Soft deleted ${codes.size} codes")
         }
-    }
-
-    /**
-     * Restores a soft-deleted SHiFT code.
-     * @param code The SHiFT code string to restore
-     */
-    suspend fun restoreDeleted(code: String) {
-        shiftCodeDao.restoreDeleted(code)
-        Log.d(TAG, "Restored deleted code: $code")
     }
 
     /**

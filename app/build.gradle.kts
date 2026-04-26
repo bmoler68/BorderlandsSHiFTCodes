@@ -24,6 +24,8 @@ plugins {
     kotlin("kapt")
 }
 
+fun envOrNull(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
+
 android {
     // Application namespace for the package
     namespace = "com.brianmoler.borderlandsshiftcodes"
@@ -38,9 +40,9 @@ android {
         // Target Android version for optimization
         targetSdk = 36
         // Internal version number for Play Store updates
-        versionCode = 10700
+        versionCode = 10800
         // User-visible version name
-        versionName = "1.7.0"
+        versionName = "1.8.0"
 
         // Test runner for instrumented tests
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -48,6 +50,18 @@ android {
         // Enable vector drawables for scalable graphics
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = envOrNull("SIGNING_STORE_FILE")
+            if (!storeFilePath.isNullOrBlank()) {
+                storeFile = file(storeFilePath)
+            }
+            storePassword = envOrNull("SIGNING_STORE_PASSWORD")
+            keyAlias = envOrNull("SIGNING_KEY_ALIAS")
+            keyPassword = envOrNull("SIGNING_KEY_PASSWORD")
         }
     }
 
@@ -63,6 +77,21 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            val hasSigningEnv = listOf(
+                "SIGNING_STORE_FILE",
+                "SIGNING_STORE_PASSWORD",
+                "SIGNING_KEY_ALIAS",
+                "SIGNING_KEY_PASSWORD"
+            ).all { !envOrNull(it).isNullOrBlank() }
+
+            if (hasSigningEnv) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                logger.lifecycle(
+                    "Release signing env vars not set. Build unsigned release or load credentials before assembleRelease."
+                )
+            }
         }
         // Debug build configuration for development
         debug {
