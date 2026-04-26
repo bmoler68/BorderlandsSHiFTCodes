@@ -12,9 +12,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import com.brianmoler.borderlandsshiftcodes.ui.components.*
 import com.brianmoler.borderlandsshiftcodes.data.FilterType
@@ -25,13 +25,14 @@ import com.brianmoler.borderlandsshiftcodes.data.GameFilterType
  */
 @Composable
 private fun getScreenSize(): ScreenSize {
-    val configuration = LocalConfiguration.current
-    val screenWidthDp = configuration.screenWidthDp
-    val screenHeightDp = configuration.screenHeightDp
+    val density = LocalDensity.current
+    val containerSize = LocalWindowInfo.current.containerSize
+    val screenWidthDp = with(density) { containerSize.width.toDp().value }
+    val screenHeightDp = with(density) { containerSize.height.toDp().value }
     
     // Consider expanded if width is >= 840dp (tablet landscape or large phone)
-    val isExpanded = screenWidthDp >= 840
-    val isTablet = screenWidthDp >= 600 && screenHeightDp >= 600
+    val isExpanded = screenWidthDp >= 840f
+    val isTablet = screenWidthDp >= 600f && screenHeightDp >= 600f
     
     return ScreenSize(isExpanded, isTablet)
 }
@@ -48,7 +49,7 @@ fun ShiftCodeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val screenSize = getScreenSize()
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
+    val containerSize = LocalWindowInfo.current.containerSize
     
     // Bottom sheet state
     val filterBottomSheetState = rememberModalBottomSheetState()
@@ -56,11 +57,11 @@ fun ShiftCodeScreen(
     
     // Calculate available height for the drawer (screen height minus system insets)
     val availableHeight = with(LocalDensity.current) {
-        val screenHeightDp = configuration.screenHeightDp
+        val screenHeightDp = containerSize.height.toDp()
         val safeDrawingInsets = WindowInsets.safeDrawing.asPaddingValues()
         val topInset = safeDrawingInsets.calculateTopPadding()
         val bottomInset = safeDrawingInsets.calculateBottomPadding()
-        (screenHeightDp.dp - topInset - bottomInset)
+        (screenHeightDp - topInset - bottomInset)
     }
     
     val drawerState = rememberDrawerState(
@@ -195,8 +196,8 @@ private fun ShiftCodeContent(
     onRefresh: () -> Unit,
     onFilterChanged: (FilterType) -> Unit,
     onGameFilterChanged: (GameFilterType) -> Unit,
-    onToggleRedemption: ((String, Boolean) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onToggleRedemption: ((String, Boolean) -> Unit)? = null
 ) {
     Box(
         modifier = modifier

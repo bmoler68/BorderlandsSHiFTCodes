@@ -1,6 +1,7 @@
 package com.brianmoler.borderlandsshiftcodes.data
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.brianmoler.borderlandsshiftcodes.config.AppConfig
 import java.time.LocalDate
@@ -32,7 +33,10 @@ import java.time.ZonedDateTime
  * @property isRedeemed User redemption status (true if user marked as redeemed)
  * @property lastUpdated Timestamp of last database update
  */
-@Entity(tableName = "shift_codes")
+@Entity(
+    tableName = "shift_codes",
+    indices = [Index(value = ["code"], unique = true)]
+)
 data class ShiftCodeEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

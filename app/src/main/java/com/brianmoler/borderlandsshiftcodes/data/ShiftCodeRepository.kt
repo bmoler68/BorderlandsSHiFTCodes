@@ -70,7 +70,7 @@ class ShiftCodeRepository(
      * @return SyncResult with sync statistics
      */
     private suspend fun performSync(remoteCodes: List<ShiftCode>): SyncResult {
-        val localCodes = localRepository.getAllActiveCodesSync()
+        val localCodes = localRepository.getAllCodesSync()
         
         // First, handle duplicates by keeping only the most recent one per code
         val deduplicatedCodes = deduplicateCodes(localCodes)
@@ -96,18 +96,18 @@ class ShiftCodeRepository(
                 codesAdded++
                 Log.d(TAG, "Added new code: ${remoteCode.code}")
             } else {
-                // Existing code - check if it needs updating
-                if (existingEntity.hasChanged(remoteCode)) {
-                    val updatedEntity = existingEntity.updateFromRemote(remoteCode)
+                // Existing code - update fields when remote data changed and/or restore soft-deleted entries.
+                val hasRemoteChanges = existingEntity.hasChanged(remoteCode)
+                if (hasRemoteChanges || existingEntity.isDeleted) {
+                    val updatedEntity = existingEntity
+                        .updateFromRemote(remoteCode)
+                        .copy(isDeleted = false)
                     localRepository.insertOrUpdate(updatedEntity)
                     codesUpdated++
-                    Log.d(TAG, "Updated code: ${remoteCode.code}")
-                }
-                
-                // Restore if it was soft-deleted
-                if (existingEntity.isDeleted) {
-                    localRepository.restoreDeleted(remoteCode.code)
-                    Log.d(TAG, "Restored deleted code: ${remoteCode.code}")
+                    Log.d(
+                        TAG,
+                        "Updated code: ${remoteCode.code} (changed=$hasRemoteChanges, restored=${existingEntity.isDeleted})"
+                    )
                 }
             }
         }
@@ -152,8 +152,11 @@ class ShiftCodeRepository(
             if (entities.size > 1) {
                 // Find the entity to keep (most recent, or highest ID if timestamps equal)
                 val entityToKeep = entities.maxWithOrNull(
-                    compareBy<ShiftCodeEntity> { it.lastUpdated }
-                        .thenBy { it.id }
+                    compareBy<ShiftCodeEntity>(
+                        { !it.isDeleted },
+                        { it.lastUpdated },
+                        { it.id }
+                    )
                 ) ?: entities.first()
                 
                 // Mark duplicates for deletion by ID

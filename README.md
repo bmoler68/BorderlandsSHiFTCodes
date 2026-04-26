@@ -58,7 +58,17 @@ This application was completely written and is maintained using AI-assisted deve
 
 ## 📋 Release History
 
-### v1.7.0 - Latest Release
+### v1.8.0 - Latest Release
+**Stability & Data Integrity Update:** Fixed intermittent duplicate SHiFT code display on startup and hardened sync behavior for safer local database updates.
+
+- **Fixed:** Intermittent startup issue where newly added codes could briefly appear twice
+- **Enhanced:** Sync flow now enforces safer one-code-per-entry handling during remote/local reconciliation
+- **Enhanced:** Added sync serialization to reduce race conditions during startup/background refresh overlap
+- **Enhanced:** Soft-delete restore/update handling improved for codes that reappear in remote data
+- **Improved:** Data-layer cleanup and deduplication logic refactored to reduce dead paths and technical debt
+- **Maintained:** Full backward compatibility with existing functionality
+
+### v1.7.0
 **Maintenance & UI Improvements:** Updated build configuration/tooling and refined compact-view layout to improve readability.
 
 - **Updated:** Target/compile SDK updated to **API 36**

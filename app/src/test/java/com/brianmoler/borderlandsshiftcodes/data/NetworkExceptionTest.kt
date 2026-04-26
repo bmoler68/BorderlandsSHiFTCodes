@@ -58,8 +58,8 @@ class NetworkExceptionTest {
         val exception = NetworkException("Test message", 200)
 
         // When & Then
-        assertTrue(exception is Exception)
-        assertTrue(exception is Throwable)
+        assertNull(exception.cause) // No cause provided in constructor
+        assertTrue(exception.stackTrace.isNotEmpty())
     }
 
     @Test

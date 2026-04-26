@@ -6,8 +6,11 @@ import com.brianmoler.borderlandsshiftcodes.data.*
 import com.brianmoler.borderlandsshiftcodes.notification.NotificationManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "SyncService"
+private val syncMutex = Mutex()
 
 /**
  * Centralized sync service that handles data synchronization and notifications.
@@ -42,44 +45,45 @@ class SyncService(private val context: Context) {
      * @return SyncResult indicating the outcome of the sync operation
      */
     suspend fun syncWithNotifications(): SyncResult = withContext(Dispatchers.IO) {
-        try {
-            Log.d(TAG, "Starting sync with notifications")
-            
-            // Get existing active codes before sync for notification comparison
-            val existingActiveCodes = repository.getActiveCodesSync()
-                .map { it.code }
-                .toSet()
-            
-            Log.d(TAG, "Found ${existingActiveCodes.size} existing active codes")
-            
-            // Perform sync with remote data
-            val syncResult = repository.syncWithRemoteData()
-            
-            if (syncResult.isSuccess) {
-                Log.d(TAG, "Sync successful: ${syncResult.codesAdded} added, ${syncResult.codesUpdated} updated, ${syncResult.codesDeleted} deleted")
-                
-                // Check for new active codes and send notifications
-                if (syncResult.codesAdded > 0) {
-                    val newActiveCodes = repository.getActiveCodesSync()
-                        .filter { !existingActiveCodes.contains(it.code) }
-                    
-                    if (newActiveCodes.isNotEmpty()) {
-                        Log.d(TAG, "Found ${newActiveCodes.size} new active codes, sending notification")
-                        notificationManager.showNewCodesNotification(newActiveCodes)
+        syncMutex.withLock {
+            try {
+                Log.d(TAG, "Starting sync with notifications")
+
+                // Get existing active codes before sync for notification comparison
+                val existingActiveCodes = repository.getActiveCodesSync()
+                    .map { it.code }
+                    .toSet()
+
+                Log.d(TAG, "Found ${existingActiveCodes.size} existing active codes")
+
+                // Perform sync with remote data
+                val syncResult = repository.syncWithRemoteData()
+
+                if (syncResult.isSuccess) {
+                    Log.d(TAG, "Sync successful: ${syncResult.codesAdded} added, ${syncResult.codesUpdated} updated, ${syncResult.codesDeleted} deleted")
+
+                    // Check for new active codes and send notifications
+                    if (syncResult.codesAdded > 0) {
+                        val newActiveCodes = repository.getActiveCodesSync()
+                            .filter { !existingActiveCodes.contains(it.code) }
+
+                        if (newActiveCodes.isNotEmpty()) {
+                            Log.d(TAG, "Found ${newActiveCodes.size} new active codes, sending notification")
+                            notificationManager.showNewCodesNotification(newActiveCodes)
+                        }
                     }
+                    syncResult
+                } else {
+                    Log.e(TAG, "Sync failed: ${syncResult.error}")
+                    syncResult
                 }
-                
-                syncResult
-            } else {
-                Log.e(TAG, "Sync failed: ${syncResult.error}")
-                syncResult
+            } catch (e: Exception) {
+                Log.e(TAG, "Sync service failed with exception", e)
+                SyncResult(
+                    isSuccess = false,
+                    error = e.message ?: "Unknown sync error"
+                )
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Sync service failed with exception", e)
-            SyncResult(
-                isSuccess = false,
-                error = e.message ?: "Unknown sync error"
-            )
         }
     }
 }

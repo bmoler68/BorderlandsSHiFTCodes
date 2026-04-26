@@ -12,7 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.brianmoler.borderlandsshiftcodes.ui.constants.UiConstants
@@ -32,18 +33,18 @@ fun NavigationDrawer(
     currentThemeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     onShowThemeDialog: () -> Unit,
+    modifier: Modifier = Modifier,
     isCompactView: Boolean = false,
-    onCompactViewChange: ((Boolean) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    onCompactViewChange: ((Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val screenWidthDp = configuration.screenWidthDp
+    val density = LocalDensity.current
+    val screenWidthDp = with(density) { LocalWindowInfo.current.containerSize.width.toDp().value }
     
     // Responsive sizing based on screen dimensions
-    val isCompact = screenWidthDp < 600
-    val isMedium = screenWidthDp >= 600 && screenWidthDp < 840
-    val isExpanded = screenWidthDp >= 840
+    val isCompact = screenWidthDp < 600f
+    val isMedium = screenWidthDp >= 600f && screenWidthDp < 840f
+    val isExpanded = screenWidthDp >= 840f
     
     // Dynamic width based on screen size
     val drawerWidth = when {
