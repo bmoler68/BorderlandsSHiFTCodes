@@ -1,0 +1,80 @@
+# Build and deploy the static dashboard/ folder to GitHub Pages.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   DASHBOARD_SUPABASE_URL       — project URL, e.g. https://xxxx.supabase.co
+#   DASHBOARD_SUPABASE_ANON_KEY  — anon (public) key for browser REST calls
+#
+# One-time: enable GitHub Pages with source "GitHub Actions" (Settings → Pages).
+# Supabase: add borderlands_shift to Exposed schemas; allow your Pages origin in
+# Authentication → URL Configuration if needed; add an RLS SELECT policy for anon
+# on borderlands_shift.shift_codes_current (see dashboard/README.md).
+
+name: Deploy dashboard to GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "dashboard/**"
+      - ".github/workflows/dashboard-pages.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write dashboard config.js
+        env:
+          DASHBOARD_SUPABASE_URL: ${{ secrets.DASHBOARD_SUPABASE_URL }}
+          DASHBOARD_SUPABASE_ANON_KEY: ${{ secrets.DASHBOARD_SUPABASE_ANON_KEY }}
+        run: |
+          python3 << 'PY'
+          import json, os, pathlib
+
+          url = os.environ.get("DASHBOARD_SUPABASE_URL", "").strip()
+          key = os.environ.get("DASHBOARD_SUPABASE_ANON_KEY", "").strip()
+          if not url or not key:
+              print(
+                  "Missing secrets: set DASHBOARD_SUPABASE_URL and DASHBOARD_SUPABASE_ANON_KEY "
+                  "in repository Actions secrets.",
+                  flush=True,
+              )
+              raise SystemExit(1)
+
+          cfg = {"supabaseUrl": url.rstrip("/"), "supabaseAnonKey": key}
+          pathlib.Path("dashboard/config.js").write_text(
+              "window.__SHIFT_DASHBOARD_CONFIG__ = " + json.dumps(cfg, indent=2) + ";\n",
+              encoding="utf-8",
+          )
+          print("Wrote dashboard/config.js", flush=True)
+          PY
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

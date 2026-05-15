@@ -1,8 +1,8 @@
-// Borderlands SHiFT Codes Dashboard JavaScript
-// Security: CSV text uses escapeHTML() in markup; data-* attributes use escapeHTMLAttribute().
+// Borderlands SHiFT Codes Dashboard — reads borderlands_shift.shift_codes_current via Supabase REST.
+// Expects window.__SHIFT_DASHBOARD_CONFIG__ { supabaseUrl, supabaseAnonKey } from config.js (generated in CI).
 
-const PRIMARY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS5isB8EOBCwYauSw7AtszSjKQq1zjK8sNP7DIhmvrwG1kf4Dmv1z5gCEgFWw6lxA0QZuKsIRifl0C3/pub?output=csv';
-const FALLBACK_CSV_URL = 'https://www.brianmoler.com/appdata/borderlandsshiftcodes/BL_SHIFT_CODES.csv';
+const REST_SCHEMA = 'borderlands_shift';
+const REST_TABLE = 'shift_codes_current';
 
 const GAME_CONFIG = [
     { id: 'BL4', name: 'Borderlands 4', icon: 'fa-gamepad' },
@@ -44,70 +44,98 @@ function escapeHTMLAttribute(text) {
         .replace(/>/g, '&gt;');
 }
 
-async function fetchCSVData() {
-    try {
-        logger.log('Fetching CSV from primary URL...');
-        const response = await fetch(PRIMARY_CSV_URL);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const data = await response.text();
-        logger.log('Successfully loaded CSV from primary URL');
-        return data;
-    } catch (error) {
-        logger.warn('Primary URL failed, trying fallback URL...', error);
-        try {
-            const response = await fetch(FALLBACK_CSV_URL);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const data = await response.text();
-            logger.log('Successfully loaded CSV from fallback URL');
-            return data;
-        } catch (fallbackError) {
-            logger.error('Both primary and fallback URLs failed:', fallbackError);
-            throw new Error('Failed to load SHiFT codes data');
-        }
-    }
+function formatPostgresTimeAs12h(t) {
+    if (!t || typeof t !== 'string') return '';
+    const m = t.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) return '';
+    let h = parseInt(m[1], 10);
+    const mm = m[2];
+    const ss = m[3] ? m[3].padStart(2, '0') : '00';
+    if (Number.isNaN(h) || h < 0 || h > 23) return '';
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${mm}:${ss} ${ampm}`;
 }
 
-function parseCSV(csvText) {
-    const lines = csvText.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
-    const codes = [];
+function ynFromApi(b) {
+    return b === true || b === 't' ? 'Y' : 'N';
+}
 
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
+function normalizeFromSupabase(row) {
+    const non = row.is_non_expiring === true;
+    const unk = row.is_unknown_expiration === true;
+    const exp = row.expiration_date || '';
+    let pseudoExp = exp;
+    if (non) pseudoExp = '1999-12-31';
+    else if (unk) pseudoExp = '2075-12-31';
 
-        const values = line.split(',').map(v => v.trim());
-        if (values.length < headers.length) continue;
+    const time12 = row.expiration_time_12h || formatPostgresTimeAs12h(row.expiration_time);
 
-        const code = {};
-        headers.forEach((header, index) => {
-            code[header] = values[index];
-        });
+    const code = {
+        CODE: row.code,
+        REWARD: row.reward,
+        EXPIRATION: pseudoExp,
+        'EXPIRATION TIME': time12 || '',
+        IS_KEY: ynFromApi(row.is_key),
+        IS_COSMETIC: ynFromApi(row.is_cosmetic),
+        IS_GEAR: ynFromApi(row.is_gear),
+        BL: ynFromApi(row.bl),
+        'BL:TPS': ynFromApi(row.bl_tps),
+        BL2: ynFromApi(row.bl2),
+        BL3: ynFromApi(row.bl3),
+        Wonderlands: ynFromApi(row.wonderlands),
+        BL4: ynFromApi(row.bl4)
+    };
 
-        if (code.Timestamp) {
-            const d = new Date(code.Timestamp);
-            if (!Number.isNaN(d.getTime())) {
-                code.timestampDate = d;
-            }
-        }
-
-        if (code.EXPIRATION) {
-            code.expirationDate = new Date(code.EXPIRATION);
-        }
-
-        code.IS_KEY = (code.IS_KEY || '').toUpperCase() === 'Y' ? 'Y' : 'N';
-        code.IS_COSMETIC = (code.IS_COSMETIC || '').toUpperCase() === 'Y' ? 'Y' : 'N';
-        code.IS_GEAR = (code.IS_GEAR || '').toUpperCase() === 'Y' ? 'Y' : 'N';
-
-        codes.push(code);
+    if (exp && !non && !unk) {
+        code.expirationDate = new Date(`${exp}T12:00:00Z`);
+    } else if (pseudoExp) {
+        code.expirationDate = new Date(`${pseudoExp}T12:00:00Z`);
+    } else {
+        code.expirationDate = null;
     }
 
-    logger.log(`Parsed ${codes.length} codes from CSV`);
-    return codes;
+    code.timestampDate = row.ingested_at_utc ? new Date(row.ingested_at_utc) : null;
+    return code;
+}
+
+async function fetchShiftCodesFromSupabase() {
+    const cfg = typeof window !== 'undefined' ? window.__SHIFT_DASHBOARD_CONFIG__ : null;
+    if (!cfg || !cfg.supabaseUrl || !cfg.supabaseAnonKey) {
+        throw new Error(
+            'Missing dashboard config. Copy config.example.js to config.js and set supabaseUrl and supabaseAnonKey, or open the GitHub Pages build that generates config.js in CI.'
+        );
+    }
+
+    const base = String(cfg.supabaseUrl).replace(/\/$/, '');
+    const key = cfg.supabaseAnonKey;
+    const headers = {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        Accept: 'application/json',
+        'Accept-Profile': REST_SCHEMA
+    };
+
+    const pageSize = 500;
+    const all = [];
+    let offset = 0;
+
+    for (;;) {
+        const url = `${base}/rest/v1/${REST_TABLE}?select=*&order=code.asc&limit=${pageSize}&offset=${offset}`;
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(`Supabase REST ${response.status}: ${errBody}`);
+        }
+        const chunk = await response.json();
+        if (!Array.isArray(chunk) || chunk.length === 0) break;
+        all.push(...chunk);
+        if (chunk.length < pageSize) break;
+        offset += pageSize;
+    }
+
+    logger.log(`Loaded ${all.length} row(s) from ${REST_SCHEMA}.${REST_TABLE}`);
+    return all.map(normalizeFromSupabase);
 }
 
 function getSecondSunday(year, month) {
@@ -161,8 +189,12 @@ function getExpirationTimestamp(code) {
             const mm = parseInt(m[2], 10);
             const ss = m[3] ? parseInt(m[3], 10) : 0;
             const ampm = m[4] ? m[4].toUpperCase() : '';
-            if (ampm === 'AM' && h === 12) h = 0;
-            if (ampm === 'PM' && h !== 12) h += 12;
+            if (ampm) {
+                if (ampm === 'AM' && h === 12) h = 0;
+                if (ampm === 'PM' && h !== 12) h += 12;
+            } else {
+                if (h < 0 || h > 23) h = 0;
+            }
             if (!Number.isNaN(h) && h >= 0 && h <= 23) localHour = h;
             if (!Number.isNaN(mm) && mm >= 0 && mm <= 59) localMinute = mm;
             if (!Number.isNaN(ss) && ss >= 0 && ss <= 59) localSecond = ss;
@@ -492,7 +524,7 @@ function renderNewCodesTrendChart() {
     newCodesTrendChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels.length ? labels : ['No dated entries'],
+            labels: labels.length ? labels : ['No ingest data'],
             datasets: [
                 {
                     label: `${gameName} new codes`,
@@ -760,7 +792,7 @@ function updateDashboard() {
     renderDetailGrid();
 }
 
-/** Latest `Timestamp` across the full dataset (not filtered by game). */
+/** Latest `ingested_at_utc` across the full dataset (not filtered by game). */
 function getLatestTimestampFromDataset() {
     let maxMs = 0;
     allCodes.forEach(code => {
@@ -783,7 +815,7 @@ function updateHeroStats() {
 
     const latest = getLatestTimestampFromDataset();
     if (!latest) {
-        stats[2].textContent = 'No dated entries';
+        stats[2].textContent = 'No ingest timestamps';
         return;
     }
 
@@ -811,8 +843,8 @@ async function loadData() {
             `;
         }
 
-        const csvData = await fetchCSVData();
-        allCodes = parseCSV(csvData);
+        const rows = await fetchShiftCodesFromSupabase();
+        allCodes = rows;
         allCodes.sort((a, b) => {
             const aTime = a.expirationDate instanceof Date ? a.expirationDate.getTime() : 0;
             const bTime = b.expirationDate instanceof Date ? b.expirationDate.getTime() : 0;
@@ -839,6 +871,11 @@ async function loadData() {
 }
 
 function initDashboard() {
+    const cy = document.getElementById('copyright-year');
+    if (cy) {
+        cy.textContent = `© ${new Date().getFullYear()}`;
+    }
+
     setupTrendChartViewportListeners();
 
     const hamburger = document.querySelector('.hamburger');

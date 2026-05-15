@@ -123,6 +123,9 @@ app/src/main/assets/secrets.properties
 __pycache__/
 *.py[cod]
 
+# Dashboard: generated at deploy time (do not commit secrets)
+dashboard/config.js
+
 # Maven
 .m2/
 pom.xml.tag

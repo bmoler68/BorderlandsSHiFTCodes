@@ -1,4 +1,173 @@
-/* Dashboard-specific styles */
+/* Borderlands SHiFT dashboard — layout shell + widgets (single stylesheet). */
+
+/* --- Layout shell --- */
+:root {
+    --primary-color: #3ddc84;
+    --primary-dark: #2bb86a;
+    --secondary-color: #1a1d29;
+    --accent-color: #f59e0b;
+    --accent-dark: #d97706;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f4f6f8;
+    --text-primary: #1a1d29;
+    --text-secondary: #5c6370;
+    --text-light: #9aa3b2;
+    --border-color: #e2e6ec;
+    --font-family: "Inter", system-ui, -apple-system, sans-serif;
+    --font-size-small: 0.875rem;
+    --font-size-normal: 1rem;
+    --font-size-large: 1.125rem;
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --border-radius: 8px;
+    --border-radius-round: 999px;
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.2s ease;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-family);
+    font-size: var(--font-size-normal);
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+}
+
+/* Nav */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(26, 29, 41, 0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 64px;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.nav-logo i {
+    color: var(--primary-color);
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: var(--spacing-lg);
+    align-items: center;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color var(--transition-fast);
+}
+
+.nav-link:hover,
+.nav-link:focus,
+.nav-link.active {
+    color: var(--primary-color);
+}
+
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--spacing-sm);
+}
+
+.hamburger .bar {
+    width: 22px;
+    height: 2px;
+    background: #fff;
+    border-radius: 1px;
+    transition: transform var(--transition-fast);
+}
+
+@media (max-width: 768px) {
+    .hamburger {
+        display: flex;
+    }
+
+    .nav-menu {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 64px;
+        flex-direction: column;
+        background: var(--secondary-color);
+        padding: var(--spacing-md);
+        gap: var(--spacing-md);
+        transform: translateY(-120%);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform var(--transition-normal), opacity var(--transition-normal);
+    }
+
+    .nav-menu.active {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+/* Footer shell */
+.footer {
+    background: var(--secondary-color);
+    color: rgba(255, 255, 255, 0.85);
+    padding: var(--spacing-xl) 0 var(--spacing-lg);
+    margin-top: var(--spacing-xl);
+}
+
+.footer a {
+    color: var(--primary-color);
+}
+
+/* --- Dashboard widgets & charts --- */
 
 /* Hero Section for Dashboard */
 .hero-dashboard {

@@ -18,8 +18,13 @@
 --   When is_non_expiring or is_unknown_expiration is true, leave expiration_date and
 --   expiration_time empty (NULL on load). Use shift_codes_current.expiration_time_12h for display.
 --
--- Apply in Supabase SQL editor or ship as a migration. Expose schema
--- borderlands_shift under Project Settings → Data API for PostgREST.
+-- Apply in Supabase SQL editor or ship as a migration.
+--
+-- REQUIRED for REST / ETL: expose schema borderlands_shift to PostgREST. In the
+-- Supabase dashboard: Project Settings → Data API → Exposed schemas → add
+-- borderlands_shift (alongside public). Without this, the API returns PGRST106.
+-- https://supabase.com/docs/guides/api/using-custom-schemas
+--
 -- Re-run GRANT blocks after DROP/CREATE on views (privileges reset).
 -- ============================================================================
 
@@ -178,7 +183,7 @@ grant select on table borderlands_shift.shift_codes_current to service_role;
 -- ---------------------------------------------------------------------------
 -- anon / authenticated — read-only public API (adjust after you add policies)
 --
--- 1) Expose schema borderlands_shift in Supabase Data API settings.
+-- 1) Add borderlands_shift to Data API → Exposed schemas (required for REST; see file header).
 -- 2) Define RLS policies; without them, non-owner roles may still be blocked.
 -- 3) Re-run grants if you recreate the view.
 -- ---------------------------------------------------------------------------

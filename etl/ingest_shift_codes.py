@@ -4,6 +4,10 @@ Load appdata/BL_SHIFT_CODES.csv into Supabase PostgREST (borderlands_shift.shift
 Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY. Optional CSV_PATH (default
 app-relative path inside the image: /app/appdata/BL_SHIFT_CODES.csv).
 
+The Supabase project must list schema `borderlands_shift` under Exposed schemas
+(Data API / API settings), or PostgREST returns PGRST106. See:
+https://supabase.com/docs/guides/api/using-custom-schemas
+
 Does not send id, ingested_at_utc, or updated_at_utc — DB defaults and triggers apply.
 """
 
@@ -110,6 +114,14 @@ def upsert_batch(
     resp = client.post(url, params=params, headers=headers, json=batch, timeout=120.0)
     if resp.status_code >= 400:
         sys.stderr.write(f"HTTP {resp.status_code}: {resp.text}\n")
+        body = resp.text or ""
+        if "PGRST106" in body or "Invalid schema" in body:
+            sys.stderr.write(
+                f"Add schema '{SCHEMA}' to Supabase: Project Settings → Data API → "
+                "Exposed schemas (also labeled API → Exposed schemas in some dashboards). "
+                "Save, wait a few seconds, then retry. "
+                "https://supabase.com/docs/guides/api/using-custom-schemas\n"
+            )
         raise SystemExit(1)
 
 

@@ -4,7 +4,9 @@
 #   SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
 #
-# Supabase: expose schema `borderlands_shift` for the Data API (Project Settings → API).
+# REQUIRED: Supabase → Project Settings → Data API → Exposed schemas → add
+# borderlands_shift (default is often only public). Else PostgREST returns PGRST106.
+# https://supabase.com/docs/guides/api/using-custom-schemas
 
 name: Supabase SHiFT codes ETL
 
