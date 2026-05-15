@@ -838,11 +838,6 @@ body {
     color: rgba(255, 255, 255, 0.9);
 }
 
-/* Footer Bottom (Copyright) */
-.footer .footer-bottom {
-    padding-top: var(--spacing-md);
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     .hero-title-dashboard {

@@ -871,11 +871,6 @@ async function loadData() {
 }
 
 function initDashboard() {
-    const cy = document.getElementById('copyright-year');
-    if (cy) {
-        cy.textContent = `© ${new Date().getFullYear()}`;
-    }
-
     setupTrendChartViewportListeners();
 
     const hamburger = document.querySelector('.hamburger');
