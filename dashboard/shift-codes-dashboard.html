@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Security: Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com cdnjs.cloudflare.com; font-src fonts.gstatic.com cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' https://docs.google.com https://*.google.com https://*.googleusercontent.com https://www.brianmoler.com; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none';">
+    
+    <!-- Security: Additional security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    
+    <!-- SEO: Basic meta tags -->
+    <title>Borderlands SHiFT Codes Dashboard - Brian Moler</title>
+    <meta name="description" content="Live dashboard for Borderlands and Wonderlands SHiFT codes. View active codes, filter by game, and never miss a reward.">
+    <meta name="keywords" content="Borderlands, SHiFT codes, Wonderlands, gaming, rewards, dashboard">
+    <meta name="author" content="Brian Moler">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../images/favicon.png">
+    <link rel="apple-touch-icon" href="../images/favicon.png">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="shift-codes-dashboard.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fab fa-android" aria-hidden="true"></i>
+                <span>Brian Moler</span>
+            </div>
+            <ul class="nav-menu" role="menubar">
+                <li role="none"><a href="../index.html" class="nav-link" role="menuitem">Home</a></li>
+                <li role="none"><a href="#dashboard" class="nav-link active" role="menuitem">Dashboard</a></li>
+            </ul>
+            <button class="hamburger" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="nav-menu">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main content wrapper -->
+    <main id="main-content">
+        <!-- Hero Section -->
+        <section id="hero" class="hero-dashboard" aria-labelledby="hero-title">
+            <div class="hero-container-dashboard">
+                <div class="hero-content-dashboard">
+                    <div class="hero-icon">
+                        <img src="../images/featured-app-icons/SHiFT_icon.png" alt="Borderlands SHiFT Codes" width="80" height="80" />
+                    </div>
+                    <h1 id="hero-title" class="hero-title-dashboard">Borderlands SHiFT Codes</h1>
+                    <p class="hero-subtitle-dashboard">Live Dashboard</p>
+                    <div class="hero-stats-dashboard" role="region" aria-label="Code statistics">
+                        <div class="stat-dashboard">
+                            <span class="stat-number-dashboard" aria-label="Total codes">0</span>
+                            <span class="stat-label-dashboard">Total Codes</span>
+                        </div>
+                        <div class="stat-dashboard">
+                            <span class="stat-number-dashboard" aria-label="Active codes">0</span>
+                            <span class="stat-label-dashboard">Active Codes</span>
+                        </div>
+                        <div class="stat-dashboard">
+                            <span class="stat-number-dashboard" aria-label="Latest Timestamp in dataset (Eastern Time)">--</span>
+                            <span class="stat-label-dashboard">Last Updated</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="dashboard-section" aria-labelledby="dashboard-title">
+            <div class="container">
+                <h2 id="dashboard-title" hidden>SHiFT Codes Dashboard</h2>
+                <div class="dashboard-controls">
+                    <button id="refreshButton" class="refresh-button" aria-label="Refresh data">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                    <a href="https://shift.gearboxsoftware.com" target="_blank" rel="noopener noreferrer" class="redeem-button" aria-label="Redeem codes on official SHiFT website">
+                        <i class="fas fa-external-link-alt"></i> Redeem Codes
+                    </a>
+                </div>
+
+                <div id="gameCards" class="game-cards-grid" aria-live="polite">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i> Loading game summaries...
+                    </div>
+                </div>
+
+                <section class="trend-section" aria-labelledby="trend-chart-title">
+                    <h3 id="trend-chart-title" class="trend-title">New Codes Over Time</h3>
+                    <p class="trend-subtitle" id="trendSubtitle">Selected game: Borderlands 4</p>
+                    <div class="trend-canvas-wrap">
+                        <canvas id="newCodesTrendChart" width="900" height="300" aria-label="Bar chart of new codes by month for selected game"></canvas>
+                    </div>
+                </section>
+
+                <section class="pie-charts-grid" aria-label="Selected game pie charts">
+                    <article class="pie-chart-card">
+                        <h3 class="trend-title">Status Breakdown</h3>
+                        <p class="trend-subtitle" id="statusBreakdownSubtitle">Selected game: Borderlands 4</p>
+                        <div class="pie-canvas-wrap">
+                            <canvas id="statusBreakdownChart" width="420" height="320" aria-label="Pie chart for status breakdown of selected game"></canvas>
+                        </div>
+                    </article>
+                    <article class="pie-chart-card">
+                        <h3 class="trend-title">Code Type Breakdown</h3>
+                        <p class="trend-subtitle" id="typeBreakdownSubtitle">Selected game: Borderlands 4</p>
+                        <div class="pie-canvas-wrap">
+                            <canvas id="typeBreakdownChart" width="420" height="320" aria-label="Pie chart for code type breakdown of selected game"></canvas>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="details-section" aria-labelledby="details-title">
+                    <div class="details-header">
+                        <h2 id="details-title" class="details-title">Code Details</h2>
+                        <p id="selectedGameLabel" class="selected-game-label">Selected game: Borderlands 4</p>
+                    </div>
+
+                    <div class="grid-filters">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search codes or rewards..." aria-label="Search codes">
+                        <div class="filter-block">
+                            <p class="filter-block-title">Code Type</p>
+                            <div class="type-filters" role="group" aria-label="Reward type filters">
+                                <label><input type="checkbox" id="filterKey" checked> Key</label>
+                                <label><input type="checkbox" id="filterCosmetic" checked> Cosmetic</label>
+                                <label><input type="checkbox" id="filterGear" checked> Gear</label>
+                            </div>
+                        </div>
+                        <div class="filter-separator" aria-hidden="true"></div>
+                        <div class="filter-block">
+                            <p class="filter-block-title">Status</p>
+                            <div class="status-filters" role="group" aria-label="Status filters">
+                                <label><input type="checkbox" id="statusActive" checked> Active</label>
+                                <label><input type="checkbox" id="statusUnknown" checked> Unknown Expiration</label>
+                                <label><input type="checkbox" id="statusNonExpiring" checked> Non-Expiring</label>
+                                <label><input type="checkbox" id="statusExpired"> Expired</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="detailGridContainer" class="detail-grid-container">
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i> Loading codes...
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-disclaimer">
+                <p><strong>Disclaimer:</strong> This is an unofficial fan-made tool. It is not affiliated with, endorsed by, or connected to Gearbox Software, 2K Games, or any official Borderlands entities.</p>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; <span class="copyright-year">2025</span> Brian Moler. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../copyright-year.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="shift-codes-dashboard.js"></script>
+</body>
+</html>
+

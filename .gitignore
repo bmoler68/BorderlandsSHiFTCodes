@@ -119,6 +119,10 @@ crashlytics.properties
 # Secrets configuration file
 app/src/main/assets/secrets.properties
 
+# Python ETL
+__pycache__/
+*.py[cod]
+
 # Maven
 .m2/
 pom.xml.tag

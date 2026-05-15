@@ -1,0 +1,19 @@
+# Slim build context for etl/Dockerfile (repo root is the build context).
+.git
+.github
+app
+gradle
+dashboard
+sql
+.cursor
+.idea
+**/.gradle
+**/build
+*.iml
+gradlew
+gradlew.bat
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+LICENSE
+README.md
