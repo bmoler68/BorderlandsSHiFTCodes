@@ -398,6 +398,12 @@ function getPieChartTypography() {
     return { legend: 12, tooltipTitle: 13, tooltipBody: 12 };
 }
 
+/** Ingest times set to this placeholder are omitted from the "new codes over time" chart only. */
+function isPlaceholderIngestAtUtc(date) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return false;
+    return date.toISOString().slice(0, 10) === '1999-12-31';
+}
+
 function aggregateNewCodesByMonthForGame(codes, gameId) {
     const byMonth = new Map();
 
@@ -405,6 +411,7 @@ function aggregateNewCodesByMonthForGame(codes, gameId) {
         if (code[gameId] !== 'Y') return;
         const d = code.timestampDate;
         if (!(d instanceof Date) || Number.isNaN(d.getTime())) return;
+        if (isPlaceholderIngestAtUtc(d)) return;
 
         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         byMonth.set(monthKey, (byMonth.get(monthKey) || 0) + 1);
