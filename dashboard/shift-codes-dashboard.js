@@ -217,11 +217,6 @@ function getCodeStatus(code) {
     return expirationWithTime > new Date() ? 'active' : 'expired';
 }
 
-function isCodeActive(code) {
-    const status = getCodeStatus(code);
-    return status === 'active' || status === 'non-expiring' || status === 'unknown-expiration';
-}
-
 function filterCodesByGame(codes, game) {
     return codes.filter(code => code[game] === 'Y');
 }
@@ -321,23 +316,6 @@ function formatDateString(dateStr) {
         month: 'short',
         day: 'numeric'
     });
-}
-
-function getGameBadges(code) {
-    const games = [];
-    const gameMap = {
-        BL: { label: 'BL1', class: 'bl1' },
-        'BL:TPS': { label: 'TPS', class: 'tps' },
-        BL2: { label: 'BL2', class: 'bl2' },
-        BL3: { label: 'BL3', class: 'bl3' },
-        Wonderlands: { label: 'WL', class: 'wl' },
-        BL4: { label: 'BL4', class: 'bl4' }
-    };
-
-    Object.entries(gameMap).forEach(([key, game]) => {
-        if (code[key] === 'Y') games.push(game);
-    });
-    return games;
 }
 
 function getGameBadgeForGame(gameId) {
