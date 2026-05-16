@@ -643,6 +643,8 @@ body {
 .game-card-stats {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Shared label row + value row so counts align across the 2×2 grid */
+    grid-template-rows: auto auto;
     gap: 0.5rem;
 }
 
@@ -650,18 +652,45 @@ body {
     background: var(--bg-secondary);
     border-radius: 8px;
     padding: 0.45rem 0.55rem;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+    row-gap: 0.2rem;
+    align-content: space-between;
 }
 
 .game-card-stats span {
     font-size: 0.72rem;
+    line-height: 1.2;
     color: var(--text-secondary);
+    align-self: start;
 }
 
 .game-card-stats strong {
     font-size: 1rem;
+    line-height: 1.1;
     color: var(--text-primary);
+    align-self: end;
+}
+
+/* Fallback when subgrid is unavailable: pin counts to the bottom of each cell */
+@supports not (grid-template-rows: subgrid) {
+    .game-card-stats {
+        grid-template-rows: unset;
+    }
+
+    .game-card-stats div {
+        display: flex;
+        flex-direction: column;
+        grid-row: unset;
+        grid-template-rows: unset;
+        min-height: 2.85em;
+    }
+
+    .game-card-stats strong {
+        margin-top: auto;
+        align-self: stretch;
+    }
 }
 
 .game-select-button {
@@ -1006,6 +1035,7 @@ body {
     .game-card-stats div {
         padding: 0.3rem 0.35rem;
         border-radius: 6px;
+        row-gap: 0.15rem;
     }
 
     .game-card-stats span {
@@ -1016,6 +1046,12 @@ body {
     .game-card-stats strong {
         font-size: 0.88rem;
         line-height: 1.1;
+    }
+
+    @supports not (grid-template-rows: subgrid) {
+        .game-card-stats div {
+            min-height: 2.65em;
+        }
     }
 
     .game-select-button {

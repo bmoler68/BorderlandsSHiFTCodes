@@ -790,8 +790,8 @@ function renderGameCards() {
                 <h3 class="game-card-title"><i class="fas ${game.icon}" aria-hidden="true"></i> ${escapeHTML(game.name)}</h3>
                 <div class="game-card-stats">
                     <div><span>Active</span><strong>${counts.active}</strong></div>
-                    <div><span>Unknown Exp.</span><strong>${counts['unknown-expiration']}</strong></div>
-                    <div><span>Non-Expiring</span><strong>${counts['non-expiring']}</strong></div>
+                    <div><span>Unknown</span><strong>${counts['unknown-expiration']}</strong></div>
+                    <div><span>Non-Exp.</span><strong>${counts['non-expiring']}</strong></div>
                     <div><span>Expired</span><strong>${counts.expired}</strong></div>
                 </div>
                 <button class="game-select-button" data-game-select="${game.id}" aria-label="Select ${escapeHTML(game.name)} for the detail grid">
