@@ -8,235 +8,219 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 private const val TAG = "RemoteShiftCodeRepository"
 private const val MAX_RETRY_ATTEMPTS = 3
 private const val RETRY_DELAY_MS = 1000L
 
+private const val REST_SCHEMA = "borderlands_shift"
+private const val REST_TABLE = "shift_codes_current"
+private const val PAGE_SIZE = 500
+
 /**
- * Repository for fetching SHiFT codes from remote CSV sources.
- * 
- * This class handles all remote data access operations including fetching
- * from remote sources and parsing CSV data. It's separate from the local
- * database operations to maintain clear separation of concerns.
+ * Fetches SHiFT codes from Supabase PostgREST (same view as the web dashboard).
  */
 class RemoteShiftCodeRepository(private val context: Context) {
-    
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(AppConfig.Network.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .readTimeout(AppConfig.Network.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .writeTimeout(AppConfig.Network.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .addInterceptor { chain ->
-            val original = chain.request()
-            val requestBuilder = original.newBuilder()
-                .header("Cache-Control", "no-cache, no-store, must-revalidate")
-                .header("Pragma", "no-cache")
-                .header("Expires", "0")
-            chain.proceed(requestBuilder.build())
-        }
-        .build()
+
+    private val httpClient =
+        OkHttpClient.Builder()
+            .connectTimeout(AppConfig.Network.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(AppConfig.Network.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(AppConfig.Network.NETWORK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val requestBuilder =
+                    original
+                        .newBuilder()
+                        .header("Cache-Control", "no-cache, no-store, must-revalidate")
+                        .header("Pragma", "no-cache")
+                        .header("Expires", "0")
+                chain.proceed(requestBuilder.build())
+            }
+            .build()
 
     /**
-     * Fetches SHiFT codes from the remote CSV source with retry logic and fallback URL
-     * @return List of parsed SHiFT codes
-     * @throws Exception if both primary and fallback URLs fail after all retries
+     * Downloads all rows from [REST_TABLE] in [REST_SCHEMA] with paging.
      */
-    suspend fun fetchShiftCodes(): List<ShiftCode> = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Fetching SHiFT codes from remote source")
-        
-        // Try primary URL first
-        try {
-            val codes = fetchFromUrl(AppConfig.Network.CSV_URL, "primary")
-            Log.d(TAG, "Successfully fetched from primary URL")
-            return@withContext codes
-        } catch (e: Exception) {
-            Log.w(TAG, "Primary URL failed: ${e.message}, trying fallback URL")
-        }
-        
-        // Try fallback URL if primary fails
-        try {
-            val codes = fetchFromUrl(AppConfig.Network.CSV_FALLBACK_URL, "fallback")
-            Log.d(TAG, "Successfully fetched from fallback URL")
-            return@withContext codes
-        } catch (e: Exception) {
-            Log.e(TAG, "Both primary and fallback URLs failed")
-            throw e
-        }
-    }
+    suspend fun fetchShiftCodes(): List<ShiftCode> =
+        withContext(Dispatchers.IO) {
+            Log.d(TAG, "Fetching SHiFT codes from Supabase")
 
-    /**
-     * Fetches SHiFT codes from a specific URL with retry logic
-     * @param url The URL to fetch from
-     * @param urlType Description of the URL type for logging
-     * @return List of parsed SHiFT codes
-     * @throws Exception if network request fails or parsing fails after all retries
-     */
-    private suspend fun fetchFromUrl(url: String, urlType: String): List<ShiftCode> = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Fetching SHiFT codes from $urlType URL: $url")
-        
-        var lastException: Exception? = null
-        
-        for (attempt in 1..MAX_RETRY_ATTEMPTS) {
-            try {
-                val request = Request.Builder()
-                    .url(url)
-                    .addHeader("User-Agent", AppConfig.Network.getUserAgent(context))
-                    .build()
-                    
-                httpClient.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        throw NetworkException("Network error from $urlType URL: ${response.code}", response.code)
+            val base = AppConfig.Network.SUPABASE_URL
+            val anonKey = AppConfig.Network.SUPABASE_ANON_KEY
+
+            var lastException: Exception? = null
+
+            repeat(MAX_RETRY_ATTEMPTS) { attempt ->
+                try {
+                    return@withContext fetchAllPages(base, anonKey)
+                } catch (e: Exception) {
+                    lastException = e
+                    Log.w(TAG, "Attempt ${attempt + 1} failed: ${e.message}")
+                    if (attempt < MAX_RETRY_ATTEMPTS - 1) {
+                        delay(RETRY_DELAY_MS * (attempt + 1))
                     }
-                    
-                    val csv = response.body.string()
-                        
-                    Log.d(TAG, "Successfully fetched CSV data from $urlType URL, parsing...")
-                    return@withContext parseCsvToShiftCodes(csv)
-                }
-            } catch (e: Exception) {
-                lastException = e
-                Log.w(TAG, "Attempt $attempt failed for $urlType URL: ${e.message}")
-                
-                if (attempt < MAX_RETRY_ATTEMPTS) {
-                    delay(RETRY_DELAY_MS * attempt) // Exponential backoff
                 }
             }
-        }
-        
-        Log.e(TAG, "All retry attempts failed for $urlType URL")
-        throw lastException ?: Exception("Unknown error occurred with $urlType URL")
-    }
 
-    /**
-     * Parses CSV content into a list of ShiftCode objects
-     * @param csv The CSV content as a string
-     * @return List of parsed ShiftCode objects
-     */
-    private fun parseCsvToShiftCodes(csv: String): List<ShiftCode> {
-        if (csv.isBlank()) {
-            Log.w(TAG, "CSV is empty")
-            return emptyList()
+            Log.e(TAG, "All retry attempts failed for Supabase fetch")
+            throw lastException ?: Exception("Unknown error fetching Supabase")
         }
-        
-        val lines = csv.lines().filter { it.isNotBlank() }
-        if (lines.isEmpty()) {
-            Log.w(TAG, "No valid lines found in CSV")
-            return emptyList()
-        }
-        
-        val header = lines.first().split(",")
-        val columnIndices = getColumnIndices(header)
-        
-        // Validate that required columns exist
-        if (columnIndices["CODE"] == -1) {
-            throw IllegalArgumentException("Required column 'CODE' not found in CSV")
-        }
-        
-        val parsedCodes = lines.drop(1).mapNotNull { line ->
-            try {
-                val cols = parseCsvLine(line)
-                createShiftCodeFromColumns(cols, columnIndices)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to parse CSV line", e)
-                null
+
+    private fun fetchAllPages(base: String, anonKey: String): List<ShiftCode> {
+        val collected = mutableListOf<ShiftCode>()
+        var offset = 0
+
+        while (true) {
+            val url =
+                "$base/rest/v1/$REST_TABLE" +
+                    "?select=*&order=code.asc&limit=$PAGE_SIZE&offset=$offset"
+
+            val request =
+                Request.Builder()
+                    .url(url)
+                    .header("apikey", anonKey)
+                    .header("Authorization", "Bearer $anonKey")
+                    .header("Accept", "application/json")
+                    .header("Accept-Profile", REST_SCHEMA)
+                    .header("User-Agent", AppConfig.Network.getUserAgent(context))
+                    .get()
+                    .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val errBody = response.body?.string().orEmpty().take(512)
+                    throw NetworkException(
+                        "Supabase REST ${response.code}: ${errBody.ifBlank { response.message }}"
+                            .take(1024),
+                        response.code
+                    )
+                }
+                val raw = response.body?.string().orEmpty()
+                val chunk = JSONArray(raw)
+                val n = chunk.length()
+                if (n == 0) {
+                    Log.d(TAG, "Parsed ${collected.size} SHiFT code(s) from Supabase")
+                    return collected
+                }
+                repeat(n) { i ->
+                    val row = chunk.optJSONObject(i) ?: return@repeat
+                    val code = shiftCodeFromJsonOrNull(row)
+                    if (code != null) {
+                        collected += code
+                    }
+                }
+                if (n < PAGE_SIZE) {
+                    Log.d(TAG, "Parsed ${collected.size} SHiFT code(s) from Supabase")
+                    return collected
+                }
+                offset += PAGE_SIZE
             }
         }
-        
-        Log.d(TAG, "Parsed ${parsedCodes.size} SHiFT codes from CSV")
-        return parsedCodes
     }
+}
 
-    /**
-     * Gets the column indices for the CSV headers
-     * @param header The CSV header row
-     * @return Map of column names to their indices
-     */
-    private fun getColumnIndices(header: List<String>): Map<String, Int> {
-        return mapOf(
-            "CODE" to header.indexOfFirst { it.equals("CODE", ignoreCase = true) },
-            "EXPIRATION" to header.indexOfFirst { it.equals("EXPIRATION", ignoreCase = true) },
-            "EXPIRATION TIME" to header.indexOfFirst { it.equals("EXPIRATION TIME", ignoreCase = true) },
-            "REWARD" to header.indexOfFirst { it.equals("REWARD", ignoreCase = true) },
-            "BL" to header.indexOfFirst { it.equals("BL", ignoreCase = true) },
-            "BL:TPS" to header.indexOfFirst { it.equals("BL:TPS", ignoreCase = true) },
-            "BL2" to header.indexOfFirst { it.equals("BL2", ignoreCase = true) },
-            "BL3" to header.indexOfFirst { it.equals("BL3", ignoreCase = true) },
-            "BL4" to header.indexOfFirst { it.equals("BL4", ignoreCase = true) },
-            "WONDERLANDS" to header.indexOfFirst { it.contains("Wonderlands", ignoreCase = true) },
-            "IS_KEY" to header.indexOfFirst { it.equals("IS_KEY", ignoreCase = true) },
-            "IS_COSMETIC" to header.indexOfFirst { it.equals("IS_COSMETIC", ignoreCase = true) },
-            "IS_GEAR" to header.indexOfFirst { it.equals("IS_GEAR", ignoreCase = true) }
-        )
-    }
+/** Maps one PostgREST row to [ShiftCode], or null when the row cannot be modeled. */
+internal fun shiftCodeFromJsonOrNull(row: JSONObject): ShiftCode? {
+    try {
+        val isNonExpiring =
+            row.optBoolean("is_non_expiring") ||
+                "t".equals(row.optString("is_non_expiring"), ignoreCase = true)
+        val isUnknownExpiration =
+            row.optBoolean("is_unknown_expiration") ||
+                "t".equals(row.optString("is_unknown_expiration"), ignoreCase = true)
 
-    /**
-     * Creates a ShiftCode object from CSV columns
-     * @param cols The CSV columns
-     * @param columnIndices Map of column names to indices
-     * @return ShiftCode object or null if creation fails
-     */
-    private fun createShiftCodeFromColumns(cols: List<String>, columnIndices: Map<String, Int>): ShiftCode? {
-        return try {
-            val code = cols.getOrNull(columnIndices["CODE"] ?: -1)?.trim() ?: ""
-            val expiration = cols.getOrNull(columnIndices["EXPIRATION"] ?: -1)?.trim() ?: ""
-            val expirationTime = cols.getOrNull(columnIndices["EXPIRATION TIME"] ?: -1)?.trim() ?: ""
-            val reward = cols.getOrNull(columnIndices["REWARD"] ?: -1)?.trim() ?: ""
-            
-            // Validate required fields
-            if (code.isBlank() || expiration.isBlank() || reward.isBlank()) {
-                return null
-            }
-            
-            ShiftCode(
-                code = code,
-                expiration = expiration,
-                expirationTime = expirationTime,
-                reward = reward,
-                bl = cols.getOrNull(columnIndices["BL"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                blTps = cols.getOrNull(columnIndices["BL:TPS"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                bl2 = cols.getOrNull(columnIndices["BL2"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                bl3 = cols.getOrNull(columnIndices["BL3"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                bl4 = cols.getOrNull(columnIndices["BL4"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                wonderlands = cols.getOrNull(columnIndices["WONDERLANDS"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                isKey = cols.getOrNull(columnIndices["IS_KEY"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                isCosmetic = cols.getOrNull(columnIndices["IS_COSMETIC"] ?: -1)?.trim().equals("Y", ignoreCase = true),
-                isGear = cols.getOrNull(columnIndices["IS_GEAR"] ?: -1)?.trim().equals("Y", ignoreCase = true)
+        if (isNonExpiring && isUnknownExpiration) {
+            Log.w(TAG, "Skipping row: both expiration flags set for ${row.optString("code")}")
+            return null
+        }
+
+        val codeStr = row.optString("code", "").trim()
+        val rewardStr = row.optString("reward", "").trim()
+        if (codeStr.isBlank() || rewardStr.isBlank()) {
+            Log.w(TAG, "Skipping row: blank code or reward")
+            return null
+        }
+
+        val expirationDateNormalized =
+            ShiftCodeExpiration.normalizeExpirationDateString(row.optString("expiration_date", ""))
+        if (!isNonExpiring && !isUnknownExpiration && expirationDateNormalized == null) {
+            Log.w(
+                TAG,
+                "Skipping row $codeStr: neither expiration flags nor a valid expiration_date"
             )
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to create ShiftCode from columns", e)
-            null
+            return null
         }
-    }
 
-    /**
-     * Parses a CSV line, handling quoted fields properly
-     * @param line The CSV line to parse
-     * @return List of parsed fields
-     */
-    private fun parseCsvLine(line: String): List<String> {
-        val result = mutableListOf<String>()
-        var inQuotes = false
-        var value = StringBuilder()
-        
-        for (c in line) {
-            when (c) {
-                '"' -> inQuotes = !inQuotes
-                ',' -> if (inQuotes) {
-                    value.append(c)
-                } else {
-                    result.add(value.toString())
-                    value = StringBuilder()
-                }
-                else -> value.append(c)
+        val time12 =
+            row.optString("expiration_time_12h", "").trim().ifBlank {
+                formatPostgresTimeAs12h(row.optString("expiration_time", ""))
             }
-        }
-        result.add(value.toString())
-        return result
+
+        return ShiftCode(
+            code = codeStr,
+            reward = rewardStr,
+            expirationDate = if (isNonExpiring || isUnknownExpiration) null else expirationDateNormalized,
+            expirationTime = time12,
+            isNonExpiring = isNonExpiring,
+            isUnknownExpiration = isUnknownExpiration,
+            bl = row.optBooleanCompat("bl"),
+            blTps = row.optBooleanCompat("bl_tps"),
+            bl2 = row.optBooleanCompat("bl2"),
+            bl3 = row.optBooleanCompat("bl3"),
+            bl4 = row.optBooleanCompat("bl4"),
+            wonderlands = row.optBooleanCompat("wonderlands"),
+            isKey = row.optBooleanCompat("is_key"),
+            isCosmetic = row.optBooleanCompat("is_cosmetic"),
+            isGear = row.optBooleanCompat("is_gear"),
+            ingestedAtUtcMillis =
+                ShiftCodeExpiration.parseIngestedAtUtcMillisFromJson(
+                    if (row.has("ingested_at_utc") && !row.isNull("ingested_at_utc")) row.get("ingested_at_utc") else null
+                )
+        )
+    } catch (e: Exception) {
+        val codeHint = row.optString("code", "?")
+        Log.w(TAG, "Skipping row $codeHint: ${e.message}", e)
+        return null
+    }
+}
+
+private fun JSONObject.optBooleanCompat(name: String): Boolean {
+    if (!has(name) || isNull(name)) return false
+    return when (val v = get(name)) {
+        is Boolean -> v
+        is String -> v.equals("true", ignoreCase = true) || v == "t"
+        is Number -> v.toInt() != 0
+        else -> false
     }
 }
 
 /**
- * Custom exception for network-related errors
+ * Mirrors [dashboard/shift-codes-dashboard.js] `formatPostgresTimeAs12h` for when
+ * `expiration_time_12h` is absent.
  */
+internal fun formatPostgresTimeAs12h(t: String): String {
+    val m =
+        Regex("""^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?""")
+            .find(t.trim())
+            ?: return ""
+
+    val hourRaw = m.groupValues[1].toIntOrNull() ?: return ""
+    val minute = m.groupValues[2].padStart(2, '0')
+    val second = (m.groupValues.getOrNull(3) ?: "").ifBlank { "00" }.padStart(2, '0')
+    if (hourRaw !in 0..23) return ""
+
+    val amPm = if (hourRaw >= 12) "PM" else "AM"
+    val h12 =
+        when (hourRaw % 12) {
+            0 -> 12
+            else -> hourRaw % 12
+        }
+
+    return String.format(java.util.Locale.US, "%d:%s:%s %s", h12, minute, second, amPm)
+}
+
 class NetworkException(message: String?, val statusCode: Int) : Exception(message)

@@ -4,6 +4,12 @@
 const REST_SCHEMA = 'borderlands_shift';
 const REST_TABLE = 'shift_codes_current';
 
+/** Matches Android AppConfig.Validation + ShiftCode / shiftCodeFromJsonOrNull rules. */
+const CODE_VALIDATION = {
+    MAX_CODE_LENGTH: 29,
+    MAX_REWARD_LENGTH: 200
+};
+
 const GAME_CONFIG = [
     { id: 'BL4', name: 'Borderlands 4', icon: 'fa-gamepad' },
     { id: 'BL3', name: 'Borderlands 3', icon: 'fa-gamepad' },
@@ -57,14 +63,86 @@ function formatPostgresTimeAs12h(t) {
     return `${h12}:${mm}:${ss} ${ampm}`;
 }
 
+function boolFromApi(b) {
+    return b === true || b === 't' || String(b).toLowerCase() === 'true';
+}
+
 function ynFromApi(b) {
-    return b === true || b === 't' ? 'Y' : 'N';
+    return boolFromApi(b) ? 'Y' : 'N';
+}
+
+function isValidExpirationDate(dateStr) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+    const d = new Date(`${dateStr}T12:00:00Z`);
+    return d instanceof Date && !Number.isNaN(d.getTime());
+}
+
+/** Mirrors ShiftCodeExpiration.normalizeExpirationDateString (yyyy-MM-dd or ISO prefix). */
+function normalizeExpirationDateString(raw) {
+    const s = String(raw ?? '').trim();
+    if (!s) return null;
+    if (isValidExpirationDate(s)) return s;
+    if (s.length >= 10) {
+        const datePart = s.substring(0, 10);
+        if (isValidExpirationDate(datePart)) return datePart;
+    }
+    return null;
+}
+
+/**
+ * Returns { ok: true } or { ok: false, codeHint, reason } — same rejection rules as the Android app.
+ */
+function validateSupabaseRow(row) {
+    const codeHint = String(row?.code ?? '?').trim() || '?';
+    const non = boolFromApi(row?.is_non_expiring);
+    const unk = boolFromApi(row?.is_unknown_expiration);
+
+    if (non && unk) {
+        return { ok: false, codeHint, reason: 'both expiration flags set' };
+    }
+
+    const code = String(row?.code ?? '').trim();
+    const reward = String(row?.reward ?? '').trim();
+    if (!code || !reward) {
+        return { ok: false, codeHint, reason: 'blank code or reward' };
+    }
+    if (code.length > CODE_VALIDATION.MAX_CODE_LENGTH) {
+        return {
+            ok: false,
+            codeHint: code,
+            reason: `code longer than ${CODE_VALIDATION.MAX_CODE_LENGTH} characters`
+        };
+    }
+    if (reward.length > CODE_VALIDATION.MAX_REWARD_LENGTH) {
+        return {
+            ok: false,
+            codeHint: code,
+            reason: `reward longer than ${CODE_VALIDATION.MAX_REWARD_LENGTH} characters`
+        };
+    }
+
+    const expirationDate = normalizeExpirationDateString(row?.expiration_date);
+    if (!non && !unk && !expirationDate) {
+        return { ok: false, codeHint: code, reason: 'missing or invalid expiration_date' };
+    }
+
+    const bl = boolFromApi(row?.bl);
+    const blTps = boolFromApi(row?.bl_tps);
+    const bl2 = boolFromApi(row?.bl2);
+    const bl3 = boolFromApi(row?.bl3);
+    const bl4 = boolFromApi(row?.bl4);
+    const wonderlands = boolFromApi(row?.wonderlands);
+    if (!bl && !blTps && !bl2 && !bl3 && !bl4 && !wonderlands) {
+        return { ok: false, codeHint: code, reason: 'at least one game must be set' };
+    }
+
+    return { ok: true };
 }
 
 function normalizeFromSupabase(row) {
-    const non = row.is_non_expiring === true;
-    const unk = row.is_unknown_expiration === true;
-    const exp = row.expiration_date || '';
+    const non = boolFromApi(row.is_non_expiring);
+    const unk = boolFromApi(row.is_unknown_expiration);
+    const exp = (!non && !unk) ? (normalizeExpirationDateString(row.expiration_date) || '') : '';
     let pseudoExp = exp;
     if (non) pseudoExp = '1999-12-31';
     else if (unk) pseudoExp = '2075-12-31';
@@ -72,8 +150,8 @@ function normalizeFromSupabase(row) {
     const time12 = row.expiration_time_12h || formatPostgresTimeAs12h(row.expiration_time);
 
     const code = {
-        CODE: row.code,
-        REWARD: row.reward,
+        CODE: String(row.code).trim(),
+        REWARD: String(row.reward).trim(),
         EXPIRATION: pseudoExp,
         'EXPIRATION TIME': time12 || '',
         IS_KEY: ynFromApi(row.is_key),
@@ -134,8 +212,23 @@ async function fetchShiftCodesFromSupabase() {
         offset += pageSize;
     }
 
-    logger.log(`Loaded ${all.length} row(s) from ${REST_SCHEMA}.${REST_TABLE}`);
-    return all.map(normalizeFromSupabase);
+    const codes = [];
+    let skipped = 0;
+    for (const row of all) {
+        const check = validateSupabaseRow(row);
+        if (!check.ok) {
+            skipped += 1;
+            logger.warn(`Skipping row ${check.codeHint}: ${check.reason}`);
+            continue;
+        }
+        codes.push(normalizeFromSupabase(row));
+    }
+
+    logger.log(
+        `Loaded ${codes.length} valid row(s) from ${REST_SCHEMA}.${REST_TABLE}` +
+            (skipped ? ` (${skipped} skipped — invalid per app rules)` : '')
+    );
+    return codes;
 }
 
 function getSecondSunday(year, month) {

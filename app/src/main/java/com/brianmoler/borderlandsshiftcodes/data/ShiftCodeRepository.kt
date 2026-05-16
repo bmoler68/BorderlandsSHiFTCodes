@@ -22,7 +22,7 @@ data class SyncResult(
  * 
  * This repository coordinates between remote data fetching and local database operations,
  * providing a unified interface for the UI layer. It handles:
- * - Fetching data from remote CSV sources
+ * - Fetching data from Supabase (PostgREST, same dataset as the web dashboard)
  * - Syncing remote data with local database
  * - Preserving user data (redemption status) during sync
  * - Providing offline-first data access
@@ -33,9 +33,9 @@ class ShiftCodeRepository(
 ) {
 
     /**
-     * Syncs the local database with remote CSV data.
+     * Syncs the local database with Supabase.
      * This method:
-     * 1. Fetches fresh data from remote CSV
+     * 1. Fetches fresh data from Supabase REST
      * 2. Compares with local database
      * 3. Updates, adds, or soft-deletes codes as needed
      * 4. Preserves user redemption status
@@ -91,14 +91,21 @@ class ShiftCodeRepository(
             
             if (existingEntity == null) {
                 // New code - insert
-                val newEntity = remoteCode.toEntity()
-                localRepository.insertOrUpdate(newEntity)
-                codesAdded++
-                Log.d(TAG, "Added new code: ${remoteCode.code}")
+                try {
+                    val newEntity = remoteCode.toEntity()
+                    localRepository.insertOrUpdate(newEntity)
+                    codesAdded++
+                    Log.d(TAG, "Added new code: ${remoteCode.code}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to persist new code ${remoteCode.code}: ${e.message}", e)
+                }
             } else {
                 // Existing code - update fields when remote data changed and/or restore soft-deleted entries.
                 val hasRemoteChanges = existingEntity.hasChanged(remoteCode)
-                if (hasRemoteChanges || existingEntity.isDeleted) {
+                val needsIngestBackfill =
+                    existingEntity.ingestedAtUtcMillis != remoteCode.ingestedAtUtcMillis &&
+                        remoteCode.ingestedAtUtcMillis != ShiftCodeExpiration.INGEST_SORT_UNKNOWN
+                if (hasRemoteChanges || needsIngestBackfill || existingEntity.isDeleted) {
                     val updatedEntity = existingEntity
                         .updateFromRemote(remoteCode)
                         .copy(isDeleted = false)
@@ -204,5 +211,5 @@ class ShiftCodeRepository(
      * @return List of active ShiftCodeEntity objects
      */
     suspend fun getActiveCodesSync() = localRepository.getAllActiveCodesSync()
-        .filter { !it.isExpired() && !it.isNonExpiring() }
+        .filter { !it.isExpired() && !it.isNonExpiring }
 }

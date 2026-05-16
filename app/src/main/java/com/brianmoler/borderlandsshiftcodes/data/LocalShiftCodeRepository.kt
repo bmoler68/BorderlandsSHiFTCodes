@@ -136,7 +136,7 @@ class LocalShiftCodeRepository(
             when (filterType) {
                 FilterType.ACTIVE -> {
                     filteredCodes = filteredCodes.filter { 
-                        !it.isExpired() && !it.isNonExpiring() 
+                        !it.isExpired() && !it.isNonExpiring 
                     }
                 }
                 FilterType.EXPIRED -> {
@@ -174,7 +174,7 @@ class LocalShiftCodeRepository(
                 }
             }
             
-            filteredCodes
+            filteredCodes.sortedLikeDashboard()
         }
     }
 

@@ -9,16 +9,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
  * Room database for storing SHiFT codes locally.
- * 
+ *
  * This database provides offline storage for SHiFT codes with support for:
- * - Local caching of remote CSV data
+ * - Local caching of Supabase-synced codes
  * - User redemption tracking
  * - Soft deletion for sync operations
  * - Database migrations for future schema changes
  */
 @Database(
     entities = [ShiftCodeEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class ShiftCodeDatabase : RoomDatabase() {
@@ -41,16 +41,9 @@ abstract class ShiftCodeDatabase : RoomDatabase() {
          */
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Add expirationTime column (defaults to empty string)
                 db.execSQL("ALTER TABLE shift_codes ADD COLUMN expirationTime TEXT NOT NULL DEFAULT ''")
-                
-                // Add isKey column (defaults to false)
                 db.execSQL("ALTER TABLE shift_codes ADD COLUMN isKey INTEGER NOT NULL DEFAULT 0")
-                
-                // Add isCosmetic column (defaults to false)
                 db.execSQL("ALTER TABLE shift_codes ADD COLUMN isCosmetic INTEGER NOT NULL DEFAULT 0")
-                
-                // Add isGear column (defaults to false)
                 db.execSQL("ALTER TABLE shift_codes ADD COLUMN isGear INTEGER NOT NULL DEFAULT 0")
             }
         }
@@ -61,7 +54,6 @@ abstract class ShiftCodeDatabase : RoomDatabase() {
          */
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Keep one row per code, preferring non-deleted, most recently updated, then highest ID.
                 db.execSQL(
                     """
                     DELETE FROM shift_codes
@@ -78,8 +70,69 @@ abstract class ShiftCodeDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_shift_codes_code ON shift_codes(code)"
+                )
+            }
+        }
 
-                // Enforce unique code values to prevent duplicate insert races.
+        /**
+         * Migration from version 3 to 4 (app 2.0.0).
+         * Rebuilds table for Supabase-aligned expiration flags and ingest time for dashboard-parity sorting.
+         */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS shift_codes_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        code TEXT NOT NULL,
+                        reward TEXT NOT NULL,
+                        expirationDate TEXT,
+                        expirationTime TEXT NOT NULL DEFAULT '',
+                        isNonExpiring INTEGER NOT NULL DEFAULT 0,
+                        isUnknownExpiration INTEGER NOT NULL DEFAULT 0,
+                        bl INTEGER NOT NULL,
+                        blTps INTEGER NOT NULL,
+                        bl2 INTEGER NOT NULL,
+                        bl3 INTEGER NOT NULL,
+                        bl4 INTEGER NOT NULL,
+                        wonderlands INTEGER NOT NULL,
+                        isKey INTEGER NOT NULL DEFAULT 0,
+                        isCosmetic INTEGER NOT NULL DEFAULT 0,
+                        isGear INTEGER NOT NULL DEFAULT 0,
+                        isDeleted INTEGER NOT NULL DEFAULT 0,
+                        isRedeemed INTEGER NOT NULL DEFAULT 0,
+                        ingestedAtUtcMillis INTEGER NOT NULL DEFAULT -9223372036854775808,
+                        lastUpdated INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+
+                db.execSQL(
+                    """
+                    INSERT INTO shift_codes_new (
+                        id, code, reward, expirationDate, expirationTime,
+                        isNonExpiring, isUnknownExpiration,
+                        bl, blTps, bl2, bl3, bl4, wonderlands,
+                        isKey, isCosmetic, isGear,
+                        isDeleted, isRedeemed, ingestedAtUtcMillis, lastUpdated
+                    )
+                    SELECT
+                        id, code, reward,
+                        CASE WHEN expiration IN ('1999-12-31', '2075-12-31') THEN NULL ELSE expiration END,
+                        expirationTime,
+                        CASE WHEN expiration = '1999-12-31' THEN 1 ELSE 0 END,
+                        CASE WHEN expiration = '2075-12-31' THEN 1 ELSE 0 END,
+                        bl, blTps, bl2, bl3, bl4, wonderlands,
+                        isKey, isCosmetic, isGear,
+                        isDeleted, isRedeemed, -9223372036854775808, lastUpdated
+                    FROM shift_codes
+                    """.trimIndent()
+                )
+
+                db.execSQL("DROP TABLE shift_codes")
+                db.execSQL("ALTER TABLE shift_codes_new RENAME TO shift_codes")
                 db.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS index_shift_codes_code ON shift_codes(code)"
                 )
@@ -88,7 +141,7 @@ abstract class ShiftCodeDatabase : RoomDatabase() {
 
         /**
          * Gets the singleton instance of the ShiftCodeDatabase.
-         * 
+         *
          * @param context Application context
          * @return ShiftCodeDatabase instance
          */
@@ -101,12 +154,12 @@ abstract class ShiftCodeDatabase : RoomDatabase() {
                 )
                     .addMigrations(MIGRATION_1_2)
                     .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_3_4)
                     .fallbackToDestructiveMigration(false) // For development - remove in production
-                .build()
+                    .build()
                 INSTANCE = instance
                 instance
             }
         }
-
     }
 }

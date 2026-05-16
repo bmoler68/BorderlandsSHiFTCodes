@@ -20,7 +20,7 @@ interface ShiftCodeDao {
     @Query("""
         SELECT * FROM shift_codes 
         WHERE isDeleted = 0 
-        ORDER BY expiration DESC
+        ORDER BY expirationDate DESC, ingestedAtUtcMillis DESC
     """)
     fun getAllActiveCodes(): Flow<List<ShiftCodeEntity>>
 
@@ -30,7 +30,7 @@ interface ShiftCodeDao {
      */
     @Query("""
         SELECT * FROM shift_codes 
-        ORDER BY expiration DESC
+        ORDER BY expirationDate DESC, ingestedAtUtcMillis DESC
     """)
     suspend fun getAllCodesSync(): List<ShiftCodeEntity>
 
@@ -41,7 +41,7 @@ interface ShiftCodeDao {
     @Query("""
         SELECT * FROM shift_codes 
         WHERE isDeleted = 0 
-        ORDER BY expiration DESC
+        ORDER BY expirationDate DESC, ingestedAtUtcMillis DESC
     """)
     suspend fun getAllActiveCodesSync(): List<ShiftCodeEntity>
 
@@ -52,7 +52,7 @@ interface ShiftCodeDao {
     @Query("""
         SELECT * FROM shift_codes 
         WHERE isRedeemed = 0 AND isDeleted = 0 
-        ORDER BY expiration DESC
+        ORDER BY expirationDate DESC, ingestedAtUtcMillis DESC
     """)
     fun getUnredeemedCodes(): Flow<List<ShiftCodeEntity>>
 
@@ -61,7 +61,13 @@ interface ShiftCodeDao {
      * Gets non-expiring codes.
      * @return Flow of non-expiring ShiftCodeEntity objects
      */
-    @Query("SELECT * FROM shift_codes WHERE isDeleted = 0 AND expiration = '1999-12-31' ORDER BY expiration DESC")
+    @Query(
+        """
+        SELECT * FROM shift_codes 
+        WHERE isDeleted = 0 AND isNonExpiring = 1 
+        ORDER BY ingestedAtUtcMillis DESC, code ASC
+        """
+    )
     fun getNonExpiringCodes(): Flow<List<ShiftCodeEntity>>
 
 

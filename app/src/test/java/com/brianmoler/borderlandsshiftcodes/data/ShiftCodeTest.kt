@@ -28,7 +28,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test valid shift code creation`() {
-        val shiftCode = ShiftCode(
+        val shiftCode = TestShiftCodeFactory.shiftCode(
             code = "TEST123",
             expiration = "2024-12-31",
             reward = "Golden Key",
@@ -41,7 +41,7 @@ class ShiftCodeTest {
         )
 
         assertEquals("TEST123", shiftCode.code)
-        assertEquals("2024-12-31", shiftCode.expiration)
+        assertEquals("2024-12-31", shiftCode.expirationDate)
         assertEquals("Golden Key", shiftCode.reward)
         assertTrue(shiftCode.bl)
         assertFalse(shiftCode.blTps)
@@ -58,7 +58,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test non-expiring code detection`() {
-        val nonExpiringCode = ShiftCode(
+        val nonExpiringCode = TestShiftCodeFactory.shiftCode(
             code = "NEVER123",
             expiration = ShiftCode.NON_EXPIRING_DATE,
             reward = "Permanent Reward",
@@ -70,7 +70,7 @@ class ShiftCodeTest {
             wonderlands = true
         )
 
-        assertTrue(nonExpiringCode.isNonExpiring())
+        assertTrue(nonExpiringCode.isNonExpiring)
         assertFalse(nonExpiringCode.isExpired())
         assertFalse(nonExpiringCode.isActive())
         assertEquals("Non-expiring", nonExpiringCode.getStatus())
@@ -84,7 +84,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test unknown expiration code detection`() {
-        val unknownExpirationCode = ShiftCode(
+        val unknownExpirationCode = TestShiftCodeFactory.shiftCode(
             code = "UNKNOWN123",
             expiration = ShiftCode.UNKNOWN_EXPIRATION_DATE,
             reward = "Unknown Expiration Reward",
@@ -96,7 +96,7 @@ class ShiftCodeTest {
             wonderlands = false
         )
 
-        assertFalse(unknownExpirationCode.isNonExpiring())
+        assertFalse(unknownExpirationCode.isNonExpiring)
         assertFalse(unknownExpirationCode.isExpired())
         assertTrue(unknownExpirationCode.isActive())
         assertEquals("Active", unknownExpirationCode.getStatus())
@@ -111,7 +111,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test expired code detection`() {
-        val expiredCode = ShiftCode(
+        val expiredCode = TestShiftCodeFactory.shiftCode(
             code = "EXPIRED123",
             expiration = "2020-01-01",
             reward = "Expired Reward",
@@ -123,7 +123,7 @@ class ShiftCodeTest {
             wonderlands = false
         )
 
-        assertFalse(expiredCode.isNonExpiring())
+        assertFalse(expiredCode.isNonExpiring)
         assertTrue(expiredCode.isExpired())
         assertFalse(expiredCode.isActive())
         assertEquals("Expired", expiredCode.getStatus())
@@ -138,7 +138,7 @@ class ShiftCodeTest {
     @Test
     fun `test active code detection`() {
         val futureDate = LocalDate.now().plusDays(30).toString()
-        val activeCode = ShiftCode(
+        val activeCode = TestShiftCodeFactory.shiftCode(
             code = "ACTIVE123",
             expiration = futureDate,
             reward = "Active Reward",
@@ -150,7 +150,7 @@ class ShiftCodeTest {
             wonderlands = false
         )
 
-        assertFalse(activeCode.isNonExpiring())
+        assertFalse(activeCode.isNonExpiring)
         assertFalse(activeCode.isExpired())
         assertTrue(activeCode.isActive())
         assertEquals("Active", activeCode.getStatus())
@@ -164,7 +164,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test valid shift code validation`() {
-        val validCode = ShiftCode(
+        val validCode = TestShiftCodeFactory.shiftCode(
             code = "VALID123",
             expiration = "2024-12-31",
             reward = "Valid Reward",
@@ -187,7 +187,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test valid shift code validation with unknown expiration`() {
-        val validUnknownExpirationCode = ShiftCode(
+        val validUnknownExpirationCode = TestShiftCodeFactory.shiftCode(
             code = "UNKNOWN123",
             expiration = ShiftCode.UNKNOWN_EXPIRATION_DATE,
             reward = "Unknown Expiration Reward",
@@ -211,7 +211,7 @@ class ShiftCodeTest {
     @Test
     fun `test invalid shift code validation - empty code`() {
         assertThrows(IllegalArgumentException::class.java) {
-            ShiftCode(
+            TestShiftCodeFactory.shiftCode(
                 code = "",
                 expiration = "2024-12-31",
                 reward = "Valid Reward",
@@ -234,7 +234,7 @@ class ShiftCodeTest {
     @Test
     fun `test invalid shift code validation - empty reward`() {
         assertThrows(IllegalArgumentException::class.java) {
-            ShiftCode(
+            TestShiftCodeFactory.shiftCode(
                 code = "VALID123",
                 expiration = "2024-12-31",
                 reward = "",
@@ -257,7 +257,7 @@ class ShiftCodeTest {
     @Test
     fun `test invalid shift code validation - no games supported`() {
         assertThrows(IllegalArgumentException::class.java) {
-            ShiftCode(
+            TestShiftCodeFactory.shiftCode(
                 code = "VALID123",
                 expiration = "2024-12-31",
                 reward = "Valid Reward",
@@ -280,7 +280,7 @@ class ShiftCodeTest {
     @Test
     fun `test invalid shift code validation - invalid date format`() {
         assertThrows(IllegalArgumentException::class.java) {
-            ShiftCode(
+            TestShiftCodeFactory.shiftCode(
                 code = "VALID123",
                 expiration = "invalid-date",
                 reward = "Valid Reward",
@@ -304,7 +304,7 @@ class ShiftCodeTest {
     fun `test invalid shift code validation - code too long`() {
         val longCode = "A".repeat(30) // Exceeds MAX_CODE_LENGTH (29)
         assertThrows(IllegalArgumentException::class.java) {
-            ShiftCode(
+            TestShiftCodeFactory.shiftCode(
                 code = longCode,
                 expiration = "2024-12-31",
                 reward = "Valid Reward",
@@ -328,7 +328,7 @@ class ShiftCodeTest {
     fun `test invalid shift code validation - reward too long`() {
         val longReward = "A".repeat(201) // Exceeds MAX_REWARD_LENGTH
         assertThrows(IllegalArgumentException::class.java) {
-            ShiftCode(
+            TestShiftCodeFactory.shiftCode(
                 code = "VALID123",
                 expiration = "2024-12-31",
                 reward = longReward,
@@ -350,7 +350,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test sanitized code output`() {
-        val shiftCode = ShiftCode(
+        val shiftCode = TestShiftCodeFactory.shiftCode(
             code = "  TEST<123>  ",
             expiration = "2024-12-31",
             reward = "Golden Key",
@@ -373,7 +373,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test sanitized reward output`() {
-        val shiftCode = ShiftCode(
+        val shiftCode = TestShiftCodeFactory.shiftCode(
             code = "TEST123",
             expiration = "2024-12-31",
             reward = "  Golden Key & Special Edition  ",
@@ -385,7 +385,7 @@ class ShiftCodeTest {
             wonderlands = false
         )
 
-        assertEquals("Golden Key  Special Edition", shiftCode.getSanitizedReward())
+        assertEquals("Golden Key Special Edition", shiftCode.getSanitizedReward())
     }
 
     /**
@@ -396,7 +396,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test sanitization removes HTML tags`() {
-        val shiftCode = ShiftCode(
+        val shiftCode = TestShiftCodeFactory.shiftCode(
             code = "TEST123",
             expiration = "2024-12-31",
             reward = "<script>alert('xss')</script>Golden Key",
@@ -408,7 +408,7 @@ class ShiftCodeTest {
             wonderlands = false
         )
 
-        assertEquals("scriptalertxss/scriptGolden Key", shiftCode.getSanitizedReward())
+        assertEquals("scriptalert(xss)/scriptGolden Key", shiftCode.getSanitizedReward())
     }
 
     /**
@@ -419,7 +419,7 @@ class ShiftCodeTest {
      */
     @Test
     fun `test sanitization normalizes whitespace`() {
-        val shiftCode = ShiftCode(
+        val shiftCode = TestShiftCodeFactory.shiftCode(
             code = "TEST123",
             expiration = "2024-12-31",
             reward = "Golden    Key\n\nSpecial\nEdition",
@@ -465,7 +465,7 @@ class ShiftCodeTest {
     @Test
     fun `test edge case date parsing`() {
         // Test with edge case dates
-        val edgeCaseCode = ShiftCode(
+        val edgeCaseCode = TestShiftCodeFactory.shiftCode(
             code = "EDGE123",
             expiration = "2024-02-29", // Leap year date
             reward = "Edge Case Reward",
@@ -487,21 +487,20 @@ class ShiftCodeTest {
      * handled and considered invalid.
      */
     @Test
-    fun `test validation with null-like empty strings`() {
-        val shiftCode = ShiftCode(
-            code = "   ", // Whitespace only
-            expiration = "2024-12-31",
-            reward = "Valid Reward",
-            bl = true,
-            blTps = false,
-            bl2 = false,
-            bl3 = false,
-            bl4 = false,
-            wonderlands = false
-        )
-
-        // Should be considered invalid due to blank code
-        assertFalse(shiftCode.isValid())
+    fun `test validation rejects blank code at construction`() {
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            TestShiftCodeFactory.shiftCode(
+                code = "   ",
+                expiration = "2024-12-31",
+                reward = "Valid Reward",
+                bl = true,
+                blTps = false,
+                bl2 = false,
+                bl3 = false,
+                bl4 = false,
+                wonderlands = false
+            )
+        }
     }
     
 } 

@@ -1,113 +1,78 @@
 package com.brianmoler.borderlandsshiftcodes
 
-import com.brianmoler.borderlandsshiftcodes.data.ShiftCode
-import org.junit.Test
+import com.brianmoler.borderlandsshiftcodes.data.TestShiftCodeFactory
 import org.junit.Assert.*
+import org.junit.Test
 
 class WorkManagerTest {
-    
+
     @Test
     fun testShiftCodeCreation() {
-        // Test that ShiftCode can be created with valid data
-        val testCode = ShiftCode(
+        val testCode = TestShiftCodeFactory.shiftCode(
             code = "TEST123456789",
-            expiration = "2025-12-31",
+            expiration = "2099-12-31",
             reward = "Test Reward",
             bl = true,
-            blTps = false,
-            bl2 = true,
-            bl3 = false,
-            bl4 = false,
-            wonderlands = false
+            bl2 = true
         )
-        
+
         assertNotNull(testCode)
         assertEquals("TEST123456789", testCode.code)
-        assertEquals("2025-12-31", testCode.expiration)
+        assertEquals("2099-12-31", testCode.expirationDate)
         assertEquals("Test Reward", testCode.reward)
         assertTrue(testCode.bl)
-        assertFalse(testCode.blTps)
         assertTrue(testCode.bl2)
-        assertFalse(testCode.bl3)
-        assertFalse(testCode.bl4)
-        assertFalse(testCode.wonderlands)
     }
-    
+
     @Test
     fun testShiftCodeValidation() {
-        // Test that ShiftCode validates correctly
-        val testCode = ShiftCode(
+        val testCode = TestShiftCodeFactory.shiftCode(
             code = "VALID123456789",
-            expiration = "2025-12-31",
+            expiration = "2099-12-31",
             reward = "Valid Reward",
             bl = true,
-            blTps = false,
-            bl2 = true,
-            bl3 = false,
-            bl4 = false,
-            wonderlands = false
+            bl2 = true
         )
-        
+
         assertTrue(testCode.isValid())
         assertFalse(testCode.isExpired())
-        assertFalse(testCode.isNonExpiring())
+        assertFalse(testCode.isNonExpiring)
         assertEquals("Active", testCode.getStatus())
     }
-    
+
     @Test
     fun testShiftCodeExpiration() {
-        // Test expiration logic
-        val expiredCode = ShiftCode(
+        val expiredCode = TestShiftCodeFactory.shiftCode(
             code = "EXPIRED123456789",
             expiration = "2020-01-01",
             reward = "Expired Reward",
-            bl = true,
-            blTps = false,
-            bl2 = false,
-            bl3 = false,
-            bl4 = false,
-            wonderlands = false
+            bl = true
         )
-        
-        val nonExpiringCode = ShiftCode(
+
+        val nonExpiringCode = TestShiftCodeFactory.shiftCode(
             code = "NEVER123456789",
             expiration = "1999-12-31",
             reward = "Non-expiring Reward",
-            bl = true,
-            blTps = false,
-            bl2 = false,
-            bl3 = false,
-            bl4 = false,
-            wonderlands = false
+            bl = true
         )
-        
+
         assertTrue(expiredCode.isExpired())
-        assertTrue(nonExpiringCode.isNonExpiring())
+        assertTrue(nonExpiringCode.isNonExpiring)
         assertEquals("Expired", expiredCode.getStatus())
         assertEquals("Non-expiring", nonExpiringCode.getStatus())
     }
-    
+
     @Test
     fun testShiftCodeSanitization() {
-        // Test sanitization methods
-        val shiftCode = ShiftCode(
+        val shiftCode = TestShiftCodeFactory.shiftCode(
             code = "SANITIZE123456789",
-            expiration = "2025-12-31",
+            expiration = "2099-12-31",
             reward = "Sanitization Test",
             bl = true,
-            blTps = false,
-            bl2 = true,
-            bl3 = false,
-            bl4 = false,
-            wonderlands = false
+            bl2 = true
         )
-        
-        val sanitizedCode = shiftCode.getSanitizedCode()
-        val sanitizedReward = shiftCode.getSanitizedReward()
-        
-        assertNotNull(sanitizedCode)
-        assertNotNull(sanitizedReward)
-        assertEquals(shiftCode.code, sanitizedCode)
-        assertEquals(shiftCode.reward, sanitizedReward)
+
+        assertEquals(shiftCode.code, shiftCode.getSanitizedCode())
+        assertEquals(shiftCode.reward, shiftCode.getSanitizedReward())
     }
 }

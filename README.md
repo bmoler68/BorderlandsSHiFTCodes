@@ -1,6 +1,8 @@
 # Borderlands SHiFT Codes
 
-An Android application for viewing and managing Borderlands SHiFT codes. This unofficial fan project provides easy access to SHiFT codes for all Borderlands games.
+An Android application for viewing and managing Borderlands SHiFT codes, with a sibling **static dashboard** (**`dashboard/`**) that draws from the **same Supabase dataset**. This unofficial fan project provides easy access to SHiFT codes for all Borderlands games.
+
+**Current status (v2.0.0):** Both the app and **`dashboard/`** read **`borderlands_shift.shift_codes_current`** via Supabase PostgREST. Maintainer data flows **CSV → ETL → Postgres** (`appdata/BL_SHIFT_CODES.csv`, **`etl/`**, GitHub Actions). The Android client is **offline-first** (Room **v4**), syncs on launch and every four hours, and applies the **same row-validation rules** as the dashboard so invalid catalog rows never appear in either client.
 
 
 
@@ -23,7 +25,9 @@ This application was completely written and is maintained using AI-assisted deve
   - Borderlands: The Pre-Sequel (TPS)
   - Tiny Tina's Wonderlands (Wonderlands)
   - Borderlands 4 (BL4)
-- 🔄 **Real-time Data Fetching** from Google Sheets with automatic updates
+- 🔄 **Remote sync via Supabase** — reads `borderlands_shift.shift_codes_current` (same REST source as the **`dashboard/`** GitHub Pages build)
+- 📊 **Stable list ordering** — expiration descending, then `ingested_at_utc` descending, then code ascending (matches **`dashboard/`** detail grid)
+- ✅ **Catalog row validation** — rows that fail app rules (code length, expiration flags, games, etc.) are skipped during sync with log warnings (dashboard applies the same rules in the browser console)
 - 💾 **Offline-First Architecture** with Room database for local storage
 - 📋 **One-tap Code Copying** to clipboard with visual feedback
 - 🌐 **Direct SHiFT Website Access** via navigation drawer
@@ -58,7 +62,21 @@ This application was completely written and is maintained using AI-assisted deve
 
 ## 📋 Release History
 
-### v1.8.0 - Latest Release
+### v2.0.0 - Latest Release
+**Supabase remote source:** The Android app syncs from the same **PostgREST** view as **`dashboard/`** instead of CSV URLs.
+
+- **Changed:** Remote catalog from **Supabase** — **`borderlands_shift.shift_codes_current`** (paged REST, `Accept-Profile: borderlands_shift`, anon key)
+- **Changed:** **`secrets.properties`** uses **`supabaseUrl`** and **`supabaseAnonKey`** (public anon key only; no service-role key in the client)
+- **Removed:** **`csv.url`** / **`csv.fallback.url`** — CSV is maintainer input for **ETL** only (**`appdata/BL_SHIFT_CODES.csv`** → **`etl/`** → Postgres)
+- **New:** Room **v4** schema aligned with Supabase — **`expirationDate`**, **`isNonExpiring`**, **`isUnknownExpiration`**, **`ingestedAtUtcMillis`** (single **3→4** migration from released v3 databases; drops legacy single **`expiration`** column)
+- **New:** Shared **`ShiftCodeExpiration`** helpers — sort keys, lenient **`ingested_at_utc`** parsing, expiration normalization (dashboard uses equivalent JS validation)
+- **New:** List order matches **dashboard** — expiration millis descending, ingest descending (unknown/placeholder ingest sorts last within the same expiration), code ascending
+- **New:** Ingest backfill on sync when local ingest was unknown but remote has a real timestamp
+- **New:** Row validation on sync — same rules as **`dashboard/`** (e.g. SHiFT code ≤ **29** characters, reward ≤ **200**, at least one game, valid expiration when flags are false); invalid rows are skipped
+- **Updated:** Network security config for **`*.supabase.co`** / **`*.supabase.in`**
+- **Updated:** **`dashboard/`** skips invalid rows and logs **`Skipping row …`** in the browser console (app parity)
+
+### v1.8.0
 **Stability & Data Integrity Update:** Fixed intermittent duplicate SHiFT code display on startup and hardened sync behavior for safer local database updates.
 
 - **Fixed:** Intermittent startup issue where newly added codes could briefly appear twice
@@ -146,12 +164,10 @@ This application was completely written and is maintained using AI-assisted deve
 - **Maintained:** Full backward compatibility with existing functionality
 
 ### v1.2.0
-**Improvements:** Added fallback URL system for improved reliability when Google Sheets CSV is unavailable.
+**Improvements:** Added CSV **primary/fallback URLs** when the Android client still downloaded Sheets/CSV endpoints directly.
 
-- **New:** Added fallback URL system for improved reliability when Google Sheets CSV is unavailable
-- Automatic fallback to backup CSV source if primary Google Sheets URL fails
-- Enhanced network resilience and user experience
-- Maintains backward compatibility with existing functionality
+- Fallback URL improved reliability when the primary Google-hosted CSV endpoint failed
+- **Historical note:** later releases migrated the client to **Supabase PostgREST**; **`appdata/BL_SHIFT_CODES.csv`** remains the maintainer-fed input for **`etl/`**
 
 ### v1.1.0
 **Improvements:** Enhanced handling of unknown expiration dates for SHiFT codes to provide better user experience.
@@ -166,7 +182,7 @@ This application was completely written and is maintained using AI-assisted deve
 
 - Modern Material 3 UI built with Jetpack Compose
 - Comprehensive game support for all Borderlands titles
-- Real-time data fetching from Google Sheets
+- Published CSV / Sheets URLs fetched by earlier Android builds (prior to Supabase)
 - Advanced filtering and search capabilities
 - Responsive design for all screen sizes and orientations
 - One-tap code copying and direct SHiFT website access
@@ -184,13 +200,13 @@ Before installing and running the application, ensure your device meets the foll
 - **Target Android Version**: Android 16 (API level 36)
 - **RAM**: Minimum 2GB RAM recommended for optimal performance
 - **Storage**: ~50MB free space for installation
-- **Network**: Internet connection required for fetching SHiFT codes
+- **Network**: Internet connection required to sync catalog data from Supabase
 
 #### Required Permissions
 The app requires the following permissions to function properly:
-- **INTERNET**: Required to fetch the latest SHiFT codes from remote servers
-  - *Used for*: Downloading SHiFT code data from Google Sheets API
-  - *Privacy*: No personal data is transmitted; only public SHiFT code data is fetched
+- **INTERNET**: Required to synchronize SHiFT codes from your Supabase project (PostgREST)
+  - *Used for*: HTTP requests to `{supabaseUrl}/rest/v1/...` with the anon key from `secrets.properties`
+  - *Privacy*: Only public/read-only catalog data configured in Supabase is fetched (no login to Supabase from the app)
 - **POST_NOTIFICATIONS**: Required for Android 13+ devices to show notifications for new codes
   - *Used for*: Displaying notifications when new active SHiFT codes are detected
   - *Privacy*: Only shows notifications for new codes; no personal data is collected
@@ -199,8 +215,8 @@ The app requires the following permissions to function properly:
   - *Privacy*: No personal data is accessed; only syncs public SHiFT code data
 
 #### Development Requirements (for developers)
-- **Android Studio**: Iguana (2024.1.1) or later (required for Android Gradle Plugin 8.13.2)
-- **Gradle**: 9.2.0 (as specified in gradle-wrapper.properties)
+- **Android Studio**: Iguana (2024.1.1) or later (recommended for Android Gradle Plugin 9.x used in this project)
+- **Gradle**: 9.4.1 (as specified in `gradle/wrapper/gradle-wrapper.properties`)
 - **Java**: JDK 11 or later
 - **Kotlin**: 2.2.21 (as specified in libs.versions.toml)
 
@@ -214,14 +230,11 @@ The app requires the following permissions to function properly:
    ```
 
 2. **Create the secrets configuration file**
-   - Copy `app/src/main/assets/secrets.properties.example` to `app/src/main/assets/secrets.properties`
-   - Edit `secrets.properties` and fill in your actual URL values:
-     - `csv.url`: URL to your primary CSV data source (e.g., Google Sheets CSV URL)
-     - `csv.fallback.url`: URL to your fallback CSV data source
-     - `privacy.policy.url`: URL to your privacy policy page
-     - `about.page.url`: URL to your about page
-   - **Important**: The `secrets.properties` file is gitignored and will not be committed to the repository
-   - See the [Secrets Configuration](#-secrets-configuration) section below for more details
+   - Copy `app/src/main/assets/secrets.properties.example` to `app/src/main/assets/secrets.properties`.
+   - Set **`supabaseUrl`** (e.g. `https://YOUR_PROJECT.supabase.co`) and **`supabaseAnonKey`** — the anon / public REST key (**not** the service-role key).
+   - Set **`privacy.policy.url`** and **`about.page.url`** as before.
+   - **Important:** `secrets.properties` is gitignored and will not be committed.
+   - Your Supabase project must **expose schema `borderlands_shift`** on the REST API and allow **anonymous `SELECT`** on **`shift_codes_current`** — same prerequisites as **`dashboard/`** (see **`sql/supabase_borderlands_shift_codes.sql`** and **`dashboard/README.md`**).
 
 3. **Open in Android Studio**
    - Launch Android Studio
@@ -236,118 +249,79 @@ The app requires the following permissions to function properly:
 
 ## 🔐 Secrets Configuration
 
-This application requires a `secrets.properties` file to store configuration URLs. This file is intentionally excluded from version control (via `.gitignore`) to keep sensitive URLs private.
+The app reads **`app/src/main/assets/secrets.properties`** at startup. The file is gitignored so keys and URLs stay out of the repository.
 
-### Setting Up Secrets
+### Required keys
 
-1. **Copy the example file**:
-   ```bash
-   cp app/src/main/assets/secrets.properties.example app/src/main/assets/secrets.properties
-   ```
+| Key | Purpose |
+|-----|---------|
+| `supabaseUrl` | Supabase project URL (`https://…supabase.co` / `.in`), no trailing slash required |
+| `supabaseAnonKey` | **Anon / public** key for PostgREST read — same credential family as **`dashboard/`** |
+| `privacy.policy.url` | Privacy policy page URL |
+| `about.page.url` | About page URL |
 
-2. **Edit `secrets.properties`** with your actual values:
-   ```properties
-   # Network URLs
-   csv.url=https://your-primary-csv-url-here
-   csv.fallback.url=https://your-fallback-csv-url-here
-   
-   # App URLs
-   privacy.policy.url=https://your-privacy-policy-url-here
-   about.page.url=https://your-about-page-url-here
-   ```
+Never ship the **service-role** key in the Android client; ingestion uses **`SUPABASE_SERVICE_ROLE_KEY`** only on the server-side ETL workflow.
 
-3. **Required Properties**:
-   - `csv.url` (required): Primary URL for fetching SHiFT code data in CSV format
-   - `csv.fallback.url` (required): Fallback URL if primary URL fails
-   - `privacy.policy.url` (required): URL to your privacy policy page
-   - `about.page.url` (required): URL to your about page
+### Setting up secrets
 
-> **Development Note:** The primary and fallback CSV URL configuration was created because of the Google Sheets CSV implementation. Google Sheets may not always reliably serve a published CSV, so a fallback option was implemented in the app to automatically switch to a self-hosted version of the CSV file when Google Sheets fails to load. This ensures the app continues to function even when the primary data source is unavailable.
-
-### How It Works
-
-- The `secrets.properties` file is loaded at app startup from `app/src/main/assets/`
-- If the file is missing or incomplete, the app will fail to start with a clear error message
-- The file is automatically excluded from git via `.gitignore`
-- A template file (`secrets.properties.example`) is included in the repository for reference
-
-### CSV Data Sources
-
-The app expects CSV data from URLs that return CSV-formatted content. Common sources include:
-- Google Sheets (published CSV)
-- GitHub raw files
-- Any web server hosting CSV files
-
-See the [CSV File Format](#-csv-file-format) section below for the expected format.
-
-> **Development Note:** For the primary CSV data, I prefer to use Google Sheets published as a CSV formatted file.  This made it easy for me to create a published Google Form for that sheet to easily maintain SHiFT code data from a simple online form from my mobile browser.  I then have a self-published CSV file that I maintain on my own server as a fallback URL, as Google Sheets can sometimes be unreliable.  However, you may use any CSV formatted file for both the primary and fallback URL, so long as the file follows the proper format.
-
-## 📊 CSV File Format
-
-The application fetches SHiFT code data from CSV files hosted at the URLs specified in `secrets.properties`. The CSV must follow a specific format for the app to parse it correctly.
-
-### Required Columns
-
-The CSV file must include a header row with the following columns (case-insensitive):
-
-| Column Name | Required | Description | Example Values |
-|------------|----------|-------------|----------------|
-| `CODE` | ✅ Yes | The SHiFT code string | `K3KBT-9XJ6T-3WBR3-TT3JJ-9WX9H` |
-| `EXPIRATION` | ✅ Yes | Expiration date in `yyyy-MM-dd` format | `2025-12-31`, `1999-12-31` (non-expiring), `2075-12-31` (unknown) |
-| `REWARD` | ✅ Yes | Description of the reward | `3 Golden Keys` |
-
-### Optional Columns
-
-| Column Name | Required | Description | Example Values |
-|------------|----------|-------------|----------------|
-| `EXPIRATION TIME` | ❌ No | Expiration time in `HH:mm` or `HH:mm:ss` format (12-hour or 24-hour) | `11:59 PM`, `23:59:59`, `12:00 AM` |
-| `BL` | ❌ No | Borderlands 1 compatibility (`Y` or `N`) | `Y`, `N` |
-| `BL:TPS` | ❌ No | Borderlands: The Pre-Sequel compatibility (`Y` or `N`) | `Y`, `N` |
-| `BL2` | ❌ No | Borderlands 2 compatibility (`Y` or `N`) | `Y`, `N` |
-| `BL3` | ❌ No | Borderlands 3 compatibility (`Y` or `N`) | `Y`, `N` |
-| `BL4` | ❌ No | Borderlands 4 compatibility (`Y` or `N`) | `Y`, `N` |
-| `WONDERLANDS` | ❌ No | Tiny Tina's Wonderlands compatibility (`Y` or `N`) | `Y`, `N` |
-| `IS_KEY` | ❌ No | Whether reward is a key (`Y` or `N`) | `Y`, `N` |
-| `IS_COSMETIC` | ❌ No | Whether reward is cosmetic (`Y` or `N`) | `Y`, `N` |
-| `IS_GEAR` | ❌ No | Whether reward is gear (`Y` or `N`) | `Y`, `N` |
-
-### Special Date Values
-
-- `1999-12-31`: Indicates a non-expiring code
-- `2075-12-31`: Indicates an unknown expiration date (treated as active)
-
-> **Development Note:** These special date values were originally created in earlier versions of the application to assist with identifying non-expiring and unknown expiration codes, and were also intended to ensure codes were sorted in the desired order. There are plans to eventually change these values to CSV flags (e.g., `IS_NON_EXPIRING`, `IS_UNKNOWN_EXPIRATION`), but this change has not been implemented yet to preserve backwards compatibility with prior versions of the application and avoid the need to maintain multiple CSV file sources to match different application versions.
-
-### CSV Example
-
-```csv
-CODE,EXPIRATION,EXPIRATION TIME,REWARD,BL,BL2,BL3,BL4,BL:TPS,WONDERLANDS,IS_KEY,IS_COSMETIC,IS_GEAR
-K3KBT-9XJ6T-3WBR3-TT3JJ-9WX9H,2025-12-31,11:59 PM,3 Golden Keys,Y,Y,Y,Y,N,N,Y,N,N
-C35TB-WS6ST-TXBRK-TTTJT-JW6XX,1999-12-31,,Permanent Reward,Y,N,N,N,N,N,N,Y,N
+```bash
+cp app/src/main/assets/secrets.properties.example app/src/main/assets/secrets.properties
 ```
 
-### Time Format Support
+Example excerpt:
 
-The `EXPIRATION TIME` column supports multiple formats:
-- **12-hour format**: `11:59 PM`, `12:00 AM`, `1:30 PM`
-- **24-hour format**: `23:59:59`, `00:00:00`, `13:30:00`
-- **With or without seconds**: `11:59 PM` or `11:59:00 PM`
+```properties
+supabaseUrl=https://YOUR_PROJECT.supabase.co
+supabaseAnonKey=YOUR_ANON_PUBLIC_KEY_HERE
+privacy.policy.url=https://your-privacy-policy-url-here
+about.page.url=https://your-about-page-url-here
+```
 
-All times are interpreted as **Eastern Time (ET)** for expiration calculations.
+If a required key is missing, the app fails at startup with a clear error pointing at `secrets.properties`.
 
-### Column Matching
 
-- Column names are matched case-insensitively
-- The `WONDERLANDS` column matches any header containing "Wonderlands" (case-insensitive)
-- Missing optional columns default to `false` or empty string
-- At least one game compatibility column (`BL`, `BL2`, `BL3`, `BL4`, `BL:TPS`, `WONDERLANDS`) must be `Y` for a valid code
+## 🗄️ Backend, dataset & web dashboard
 
-### Parsing Behavior
+The **Android app** and the **`dashboard/`** site both load **`borderlands_shift.shift_codes_current`** through Supabase **PostgREST** (same anon key category, same exposed schema requirement).
 
-- The CSV parser handles quoted fields properly
-- Empty or blank required fields cause the row to be skipped
-- Invalid date formats cause the row to be skipped
-- The parser is tolerant of extra columns (they are ignored)
+### What the app downloads
+
+- Paged **`GET`** on `…/rest/v1/shift_codes_current` with `Accept-Profile: borderlands_shift`, `Authorization: Bearer <anon>`, and **`apikey`**
+- Rows use Supabase semantics: **`expiration_date`** (nullable), **`is_non_expiring`**, **`is_unknown_expiration`**, game/reward flags, and **`ingested_at_utc`**
+- Invalid rows are **not stored** (validation matches **`dashboard/`** — see **`dashboard/README.md`**)
+- **`ingested_at_utc`** drives secondary list ordering (**after expiration**); placeholder ingest on **1999-12-31** UTC is treated as unknown for sort
+- UI display still shows **Never** / **Unknown** for flagged rows (not raw sentinel dates)
+
+### Maintainer pipeline (CSV → Supabase → clients)
+
+Editors maintain **`appdata/BL_SHIFT_CODES.csv`**. Changes can trigger **`supabase-shift-codes-etl`** (see **`.github/workflows/supabase-shift-codes-etl.yml`**) which loads data into Postgres using the **`service_role`** key; the apps only need **anon** read access.
+
+DDL and policy notes live in **`sql/supabase_borderlands_shift_codes.sql`**.
+
+### Maintainer CSV (`appdata/BL_SHIFT_CODES.csv`)
+
+Human-editable import format for ETL (**not** fetched by the phone app anymore). Booleans are `true` / `false`; times are Postgres-friendly (`HH:mm:ss`, optional 12-hour on import):
+
+| Column | Notes |
+|--------|-------|
+| `code`, `reward` | Required textual fields |
+| `expiration_date`, `expiration_time` | Real expiration when neither flag below is `true`; times follow **ET** semantics downstream |
+| `is_non_expiring` | Row is non-expiring; DB keeps `expiration_date` NULL |
+| `is_unknown_expiration` | Unknown end date; DB keeps `expiration_date` NULL |
+| `bl`, `bl_tps`, `bl2`, `bl3`, `wonderlands`, `bl4`, `is_key`, `is_cosmetic`, `is_gear` | Boolean columns |
+
+Legacy **Google Sheets** columns (`CODE`, `EXPIRATION` magic dates) are **historical only** — use the layout above.
+
+**Example:**
+
+```csv
+code,reward,expiration_date,expiration_time,is_non_expiring,is_unknown_expiration,bl,bl_tps,bl2,bl3,wonderlands,bl4,is_key,is_cosmetic,is_gear
+YOUR-CODE,Example Keys,2030-12-31,00:00:00,false,false,false,false,true,false,false,true,true,false,false
+```
+
+### Static web dashboard
+
+Built from **`dashboard/`** (charts, filters, detail table, Supabase). Uses the **same validation and sort rules** as the app. Local run and Pages deploy are in **`dashboard/README.md`**; CI injects **`DASHBOARD_SUPABASE_URL`** / **`DASHBOARD_SUPABASE_ANON_KEY`** in **`.github/workflows/dashboard-pages.yml`** (auto-deploy when **`dashboard/**`** changes).
 
 
 
@@ -390,7 +364,7 @@ Licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 - `androidx.work:work-runtime-ktx` (2.11.0) - WorkManager for background tasks and notifications
 
 **Network and Async Libraries:**
-- `com.squareup.okhttp3:okhttp` (5.3.0) - HTTP client for network requests
+- `com.squareup.okhttp3:okhttp` (5.3.0) — HTTP client used for Supabase PostgREST (JSON-over-HTTPS). Response bodies use the Android SDK **`org.json`** API (no extra Maven artifact; platform component under the Android Software Development Kit license from Google).
 - `org.jetbrains.kotlinx:kotlinx-coroutines-android` (1.10.2) - Coroutines for asynchronous operations
 
 **Testing Libraries:**
@@ -399,7 +373,7 @@ Licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 **Development Tools:**
 - Kotlin language features and compiler (2.2.21)
-- Android Gradle Plugin (8.13.2)
+- Android Gradle Plugin (9.2.0, from `gradle/libs.versions.toml`)
 
 ### Eclipse Public License 1.0
 Licensed under [EPL 1.0](https://www.eclipse.org/legal/epl-v10.html)

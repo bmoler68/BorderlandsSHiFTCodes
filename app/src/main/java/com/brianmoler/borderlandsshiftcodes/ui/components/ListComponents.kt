@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.brianmoler.borderlandsshiftcodes.data.ShiftCodeEntity
+import com.brianmoler.borderlandsshiftcodes.data.sortedLikeDashboard
 import com.brianmoler.borderlandsshiftcodes.data.FilterType
 import com.brianmoler.borderlandsshiftcodes.data.GameFilterType
 import com.brianmoler.borderlandsshiftcodes.data.RewardFilterType
@@ -525,7 +526,7 @@ fun ShiftCodeCard(
     onToggleRedemption: ((String, Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val isNonExpiring = shiftCode.isNonExpiring()
+    val isNonExpiring = shiftCode.isNonExpiring
     val isExpired = shiftCode.isExpired()
     
     // Professional status colors
@@ -680,7 +681,7 @@ fun ShiftCodeCard(
                         fontSize = if (screenSize.isExpanded) UiConstants.Typography.MEDIUM_TEXT else UiConstants.Typography.SMALL_TEXT
                     )
                     // Display time below date if available
-                    if (!isNonExpiring && shiftCode.expiration != ShiftCodeEntity.UNKNOWN_EXPIRATION_DATE && shiftCode.getDisplayTime().isNotBlank()) {
+                    if (!isNonExpiring && !shiftCode.isUnknownExpiration && shiftCode.getDisplayTime().isNotBlank()) {
                         Text(
                             text = shiftCode.getDisplayTime(),
                             style = MaterialTheme.typography.bodySmall,
@@ -823,7 +824,7 @@ fun CompactShiftCodeCard(
     onToggleRedemption: ((String, Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val isNonExpiring = shiftCode.isNonExpiring()
+    val isNonExpiring = shiftCode.isNonExpiring
     val isExpired = shiftCode.isExpired()
     
     // Status color for left border
@@ -836,8 +837,8 @@ fun CompactShiftCodeCard(
     // Compact expiration display (MM/dd format)
     val expirationDisplay = when {
         isNonExpiring -> "Never"
-        shiftCode.expiration != ShiftCodeEntity.UNKNOWN_EXPIRATION_DATE -> {
-            val dateParts = shiftCode.expiration.split("-")
+        !shiftCode.isUnknownExpiration && shiftCode.expirationDate != null -> {
+            val dateParts = shiftCode.expirationDate.split("-")
             if (dateParts.size == 3) {
                 "${dateParts[1].toIntOrNull() ?: ""}/${dateParts[2].toIntOrNull() ?: ""}"
             } else {
@@ -1050,9 +1051,9 @@ private fun getFilteredCodes(uiState: ShiftCodeUiState): List<ShiftCodeEntity> {
     val codes = uiState.shiftCodes
     val statusFilteredCodes = when (uiState.currentFilter) {
         FilterType.ALL -> codes
-        FilterType.ACTIVE -> codes.filter { !it.isExpired() && !it.isNonExpiring() }
+        FilterType.ACTIVE -> codes.filter { !it.isExpired() && !it.isNonExpiring }
         FilterType.EXPIRED -> codes.filter { it.isExpired() }
-        FilterType.NON_EXPIRING -> codes.filter { it.isNonExpiring() }
+        FilterType.NON_EXPIRING -> codes.filter { it.isNonExpiring }
         FilterType.NOT_REDEEMED -> codes.filter { !it.isRedeemed }
     }
     
@@ -1073,6 +1074,5 @@ private fun getFilteredCodes(uiState: ShiftCodeUiState): List<ShiftCodeEntity> {
         RewardFilterType.GEAR -> gameFilteredCodes.filter { it.isGear }
     }
     
-    // Sort by expiration date in descending order (newest first) - matches database sorting
-    return rewardFilteredCodes.sortedByDescending { it.expiration }
+    return rewardFilteredCodes.sortedLikeDashboard()
 } 

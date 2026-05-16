@@ -58,16 +58,16 @@ object AppConfig {
      */
     object Network {
         /**
-         * Gets the CSV URL from secrets file.
+         * Supabase project URL (e.g. https://xxxx.supabase.co) for PostgREST reads.
          */
-        val CSV_URL: String
-            get() = AppConfig.getSecret("csv.url")
-        
+        val SUPABASE_URL: String
+            get() = AppConfig.getSecret("supabaseUrl").trimEnd('/')
+
         /**
-         * Gets the CSV fallback URL from secrets file.
+         * Supabase anon (public) API key for REST — same role as the dashboard.
          */
-        val CSV_FALLBACK_URL: String
-            get() = AppConfig.getSecret("csv.fallback.url")
+        val SUPABASE_ANON_KEY: String
+            get() = AppConfig.getSecret("supabaseAnonKey")
         
         const val NETWORK_TIMEOUT_SECONDS = 30L
         

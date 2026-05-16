@@ -9,7 +9,7 @@ import com.brianmoler.borderlandsshiftcodes.sync.SyncService
 private const val TAG = "SyncWorker"
 
 /**
- * WorkManager worker that performs periodic synchronization with remote CSV data.
+ * WorkManager worker that performs periodic synchronization with Supabase-backed remote data.
  * 
  * This worker delegates to SyncService to avoid code duplication with ViewModel sync.
  */
