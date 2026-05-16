@@ -221,6 +221,33 @@ function filterCodesByGame(codes, game) {
     return codes.filter(code => code[game] === 'Y');
 }
 
+/** Milliseconds for secondary sort; missing or placeholder ingest sorts last among same expiration. */
+function getIngestSortKeyMs(code) {
+    const d = code.timestampDate;
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return Number.NEGATIVE_INFINITY;
+    if (isPlaceholderIngestAtUtc(d)) return Number.NEGATIVE_INFINITY;
+    return d.getTime();
+}
+
+/** Detail table: expiration desc, then ingest desc, then code asc. */
+function compareCodesForDetailGrid(a, b) {
+    const expA = a.expirationDate instanceof Date && !Number.isNaN(a.expirationDate.getTime())
+        ? a.expirationDate.getTime()
+        : 0;
+    const expB = b.expirationDate instanceof Date && !Number.isNaN(b.expirationDate.getTime())
+        ? b.expirationDate.getTime()
+        : 0;
+    if (expB !== expA) return expB - expA;
+
+    const ingA = getIngestSortKeyMs(a);
+    const ingB = getIngestSortKeyMs(b);
+    if (ingB !== ingA) return ingB - ingA;
+
+    return String(a.CODE || '')
+        .trim()
+        .localeCompare(String(b.CODE || '').trim(), 'en-US');
+}
+
 function filterCodesBySearch(codes, query) {
     if (!query) return codes;
     const lowerQuery = query.toLowerCase();
@@ -691,7 +718,8 @@ function getGridCodes() {
     let filtered = filterCodesBySearch(allCodes, searchQuery);
     filtered = filterCodesByType(filtered, selectedTypes);
     filtered = filterCodesByStatus(filtered, selectedStatuses);
-    return filterCodesByGame(filtered, selectedGame);
+    filtered = filterCodesByGame(filtered, selectedGame);
+    return [...filtered].sort(compareCodesForDetailGrid);
 }
 
 function renderDetailGrid() {
@@ -830,11 +858,6 @@ async function loadData() {
 
         const rows = await fetchShiftCodesFromSupabase();
         allCodes = rows;
-        allCodes.sort((a, b) => {
-            const aTime = a.expirationDate instanceof Date ? a.expirationDate.getTime() : 0;
-            const bTime = b.expirationDate instanceof Date ? b.expirationDate.getTime() : 0;
-            return bTime - aTime;
-        });
 
         updateDashboard();
         updateHeroStats();

@@ -11,15 +11,15 @@
 name: Supabase SHiFT codes ETL
 
 on:
+  # Run manually when ETL Dockerfile/scripts or workflow change without a CSV update.
   workflow_dispatch:
   push:
     branches:
       - main
       - master
     paths:
+      # Auto-ingest only when the source dataset changes.
       - "appdata/BL_SHIFT_CODES.csv"
-      - "etl/**"
-      - ".github/workflows/supabase-shift-codes-etl.yml"
 
 jobs:
   ingest:
