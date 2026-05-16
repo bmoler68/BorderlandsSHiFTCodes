@@ -41,7 +41,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.brianmoler.borderlandsshiftcodes.data.ShiftCodeEntity
-import com.brianmoler.borderlandsshiftcodes.data.sortedLikeDashboard
 import com.brianmoler.borderlandsshiftcodes.data.FilterType
 import com.brianmoler.borderlandsshiftcodes.data.GameFilterType
 import com.brianmoler.borderlandsshiftcodes.data.RewardFilterType
@@ -1074,5 +1073,6 @@ private fun getFilteredCodes(uiState: ShiftCodeUiState): List<ShiftCodeEntity> {
         RewardFilterType.GEAR -> gameFilteredCodes.filter { it.isGear }
     }
     
-    return rewardFilteredCodes.sortedLikeDashboard()
+    // Order comes from LocalShiftCodeRepository.sortedForCatalog().
+    return rewardFilteredCodes
 } 

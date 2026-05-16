@@ -155,7 +155,7 @@ abstract class ShiftCodeDatabase : RoomDatabase() {
                     .addMigrations(MIGRATION_1_2)
                     .addMigrations(MIGRATION_2_3)
                     .addMigrations(MIGRATION_3_4)
-                    .fallbackToDestructiveMigration(false) // For development - remove in production
+                    .fallbackToDestructiveMigration(false)
                     .build()
                 INSTANCE = instance
                 instance

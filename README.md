@@ -316,8 +316,10 @@ Legacy **Google Sheets** columns (`CODE`, `EXPIRATION` magic dates) are **histor
 
 ```csv
 code,reward,expiration_date,expiration_time,is_non_expiring,is_unknown_expiration,bl,bl_tps,bl2,bl3,wonderlands,bl4,is_key,is_cosmetic,is_gear
-YOUR-CODE,Example Keys,2030-12-31,00:00:00,false,false,false,false,true,false,false,true,true,false,false
+AAAAA-BBBBB-CCCCC-DDDDD-EEEEE,Example Keys,2030-12-31,00:00:00,false,false,false,false,true,false,false,true,true,false,false
 ```
+
+Codes must be **29 characters** (five groups of five letters/digits separated by hyphens). Longer or malformed codes are rejected by the app and dashboard.
 
 ### Static web dashboard
 

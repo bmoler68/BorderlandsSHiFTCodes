@@ -29,7 +29,7 @@ class ShiftCodeExpirationTest {
     }
 
     @Test
-    fun dashboardListComparator_sortsByIngestWithinSameExpiration() {
+    fun catalogListComparator_sortsByIngestWithinSameExpiration() {
         val exp = "2030-12-31"
         val older = TestShiftCodeFactory.entity(
             code = "AAAAA-AAAAA-AAAAA-AAAAA-AAAAA",
@@ -41,13 +41,13 @@ class ShiftCodeExpirationTest {
             code = "BBBBB-BBBBB-BBBBB-BBBBB-BBBBB",
             ingestedAtUtcMillis = 1_800_000_000_000L
         )
-        val sorted = listOf(older, newer).sortedLikeDashboard()
+        val sorted = listOf(older, newer).sortedForCatalog()
         assertEquals(newer.code, sorted[0].code)
         assertEquals(older.code, sorted[1].code)
     }
 
     @Test
-    fun dashboardListComparator_unknownIngestSortsAfterKnownForSameExpiration() {
+    fun catalogListComparator_unknownIngestSortsAfterKnownForSameExpiration() {
         val exp = "2030-12-31"
         val known = TestShiftCodeFactory.entity(
             code = "AAAAA-AAAAA-AAAAA-AAAAA-AAAAA",
@@ -59,7 +59,7 @@ class ShiftCodeExpirationTest {
             code = "BBBBB-BBBBB-BBBBB-BBBBB-BBBBB",
             ingestedAtUtcMillis = ShiftCodeExpiration.INGEST_SORT_UNKNOWN
         )
-        val sorted = listOf(unknown, known).sortedLikeDashboard()
+        val sorted = listOf(unknown, known).sortedForCatalog()
         assertEquals(known.code, sorted[0].code)
         assertEquals(unknown.code, sorted[1].code)
     }

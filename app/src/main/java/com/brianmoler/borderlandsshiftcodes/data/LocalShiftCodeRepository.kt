@@ -174,7 +174,7 @@ class LocalShiftCodeRepository(
                 }
             }
             
-            filteredCodes.sortedLikeDashboard()
+            filteredCodes.sortedForCatalog()
         }
     }
 

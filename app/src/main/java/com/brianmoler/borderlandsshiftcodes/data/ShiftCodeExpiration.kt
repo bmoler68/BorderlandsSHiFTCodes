@@ -77,23 +77,23 @@ object ShiftCodeExpiration {
         }
 
     /**
-     * Secondary sort key for list ordering (matches dashboard `getIngestSortKeyMs`).
+     * Secondary sort key for catalog list ordering.
      * Unknown / placeholder ingest sorts last among rows with the same expiration.
      */
     fun ingestSortKeyMillis(ingestedAtUtcMillis: Long): Long =
         if (ingestedAtUtcMillis == INGEST_SORT_UNKNOWN) INGEST_SORT_UNKNOWN else ingestedAtUtcMillis
 
     /**
-     * Detail list order: expiration desc, ingest desc, code asc (dashboard `compareCodesForDetailGrid`).
+     * Catalog list order: expiration desc, ingest desc, code asc.
      */
-    fun dashboardListComparator(): Comparator<ShiftCodeEntity> =
+    fun catalogListComparator(): Comparator<ShiftCodeEntity> =
         compareByDescending<ShiftCodeEntity> { it.sortExpirationMillis() }
             .thenByDescending { ingestSortKeyMillis(it.ingestedAtUtcMillis) }
             .thenBy { it.code }
 
     /**
      * Parses `ingested_at_utc` for persistence and sorting.
-     * Placeholder ingest on 1999-12-31 UTC is stored as [INGEST_SORT_UNKNOWN] (dashboard parity).
+     * Placeholder ingest on 1999-12-31 UTC is stored as [INGEST_SORT_UNKNOWN].
      */
     fun parseIngestedAtUtcMillis(iso8601OrEmpty: String): Long {
         val s = iso8601OrEmpty.trim()
@@ -163,6 +163,6 @@ data class LegacyExpirationFields(
     val expirationDate: String?
 )
 
-/** Sorts like the web dashboard detail grid. */
-fun List<ShiftCodeEntity>.sortedLikeDashboard(): List<ShiftCodeEntity> =
-    sortedWith(ShiftCodeExpiration.dashboardListComparator())
+/** Applies [ShiftCodeExpiration.catalogListComparator] to this list. */
+fun List<ShiftCodeEntity>.sortedForCatalog(): List<ShiftCodeEntity> =
+    sortedWith(ShiftCodeExpiration.catalogListComparator())
