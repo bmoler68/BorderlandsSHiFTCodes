@@ -71,7 +71,7 @@ body {
     padding: 0 var(--spacing-lg);
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     min-height: 64px;
 }
 
@@ -86,73 +86,6 @@ body {
 
 .nav-logo i {
     color: var(--primary-color);
-}
-
-.nav-menu {
-    display: flex;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    gap: var(--spacing-lg);
-    align-items: center;
-}
-
-.nav-link {
-    color: rgba(255, 255, 255, 0.85);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color var(--transition-fast);
-}
-
-.nav-link:hover,
-.nav-link:focus,
-.nav-link.active {
-    color: var(--primary-color);
-}
-
-.hamburger {
-    display: none;
-    flex-direction: column;
-    gap: 5px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: var(--spacing-sm);
-}
-
-.hamburger .bar {
-    width: 22px;
-    height: 2px;
-    background: #fff;
-    border-radius: 1px;
-    transition: transform var(--transition-fast);
-}
-
-@media (max-width: 768px) {
-    .hamburger {
-        display: flex;
-    }
-
-    .nav-menu {
-        position: fixed;
-        left: 0;
-        right: 0;
-        top: 64px;
-        flex-direction: column;
-        background: var(--secondary-color);
-        padding: var(--spacing-md);
-        gap: var(--spacing-md);
-        transform: translateY(-120%);
-        opacity: 0;
-        pointer-events: none;
-        transition: transform var(--transition-normal), opacity var(--transition-normal);
-    }
-
-    .nav-menu.active {
-        transform: translateY(0);
-        opacity: 1;
-        pointer-events: auto;
-    }
 }
 
 /* Footer shell */
