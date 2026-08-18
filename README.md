@@ -2,7 +2,7 @@
 
 An Android application for viewing and managing Borderlands SHiFT codes, with a sibling **static dashboard** (**`dashboard/`**) that draws from the **same Supabase dataset**. This unofficial fan project provides easy access to SHiFT codes for all Borderlands games.
 
-**Current status (v2.0.0):** Both the app and **`dashboard/`** read **`borderlands_shift.shift_codes_current`** via Supabase PostgREST. Maintainer data flows **CSV → ETL → Postgres** (`appdata/BL_SHIFT_CODES.csv`, **`etl/`**, GitHub Actions). The Android client is **offline-first** (Room **v4**), syncs on launch and every four hours, and applies the **same row-validation rules** as the dashboard so invalid catalog rows never appear in either client.
+**Current status (v2.1.0):** Both the app and **`dashboard/`** read **`borderlands_shift.shift_codes_current`** via Supabase PostgREST. Maintainer data flows **CSV → ETL → Postgres** (`appdata/BL_SHIFT_CODES.csv`, **`etl/`**, GitHub Actions). The Android client is **offline-first** (Room **v4**), syncs on launch and every four hours, and applies the **same row-validation rules** as the dashboard so invalid catalog rows never appear in either client. If a remote refresh fails, **saved Room codes stay on screen** with a retry banner instead of a full-screen error.
 
 
 
@@ -50,7 +50,8 @@ This application was completely written and is maintained using AI-assisted deve
 - 📱 **Adaptive Layout** that works seamlessly on phones and tablets
 - 🎨 **Consistent Visual Design** with proper spacing, typography, and colors
 - 🔄 **Smart Sync System** with background data synchronization
-- 📊 **Offline Mode Support** with cached data when network is unavailable
+- 📊 **Offline Mode Support** with cached Room data when the network is unavailable or a remote refresh fails
+- 📶 **Failed-sync browsing** — saved codes remain visible with a retry banner; the full-screen error is only for local catalog load failures
 - 🔔 **Automatic Notifications** for new active codes every 4 hours
 - ⚡ **Background Sync** using WorkManager for optimal battery efficiency
 - 📅 **Precise Expiration Tracking** with date and time support in Eastern Time
@@ -62,7 +63,17 @@ This application was completely written and is maintained using AI-assisted deve
 
 ## 📋 Release History
 
-### v2.0.0 - Latest Release
+### v2.1.0 - Latest Release
+**Offline catalog browsing:** Remote sync failures no longer hide cached SHiFT codes behind a full-screen error.
+
+- **Fixed:** Failed Supabase refreshes previously set a catalog **error**, which replaced the list with the error screen even when Room still had codes
+- **New:** **`OfflineSyncBanner`** — “Couldn't refresh. Showing saved codes.” (or “Couldn't refresh from the server.” when the catalog is empty) with **Retry**
+- **New:** Top bar subtitle **Couldn't refresh from the server** after a failed sync
+- **Changed:** **`error`** is reserved for **local** catalog load failures; remote sync failures only set **`isOfflineMode`**
+- **Changed:** Catalog body prefers the **list** whenever saved codes exist (loading still wins); empty catalog plus failed sync shows empty state plus the banner, not the error screen
+- **Updated:** **`dashboard/`** header is **logo-only** (removed Dashboard/Repository nav links and hamburger)
+
+### v2.0.0
 **Supabase remote source:** The Android app syncs from the same **PostgREST** view as **`dashboard/`** instead of CSV URLs.
 
 - **Changed:** Remote catalog from **Supabase** — **`borderlands_shift.shift_codes_current`** (paged REST, `Accept-Profile: borderlands_shift`, anon key)
