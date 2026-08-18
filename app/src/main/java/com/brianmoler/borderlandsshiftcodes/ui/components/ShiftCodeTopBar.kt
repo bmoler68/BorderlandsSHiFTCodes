@@ -21,7 +21,8 @@ fun ShiftCodeTopBar(
     onRefresh: () -> Unit,
     onMenuClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isSyncing: Boolean = false
+    isSyncing: Boolean = false,
+    isOfflineMode: Boolean = false
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -84,9 +85,17 @@ fun ShiftCodeTopBar(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = if (isSyncing) "Syncing with latest codes..." else "Stay updated with the latest codes",
+                        text = when {
+                            isSyncing -> "Syncing with latest codes..."
+                            isOfflineMode -> "Couldn't refresh from the server"
+                            else -> "Stay updated with the latest codes"
+                        },
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isSyncing) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isSyncing || isOfflineMode) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }

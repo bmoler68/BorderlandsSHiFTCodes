@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import com.brianmoler.borderlandsshiftcodes.ui.components.*
+import com.brianmoler.borderlandsshiftcodes.ui.constants.UiConstants
 import com.brianmoler.borderlandsshiftcodes.data.FilterType
 import com.brianmoler.borderlandsshiftcodes.data.GameFilterType
 
@@ -114,6 +115,7 @@ fun ShiftCodeScreen(
                     onRefresh = { viewModel.syncWithRemoteData() },
                     onMenuClick = { viewModel.openDrawer() },
                     isSyncing = uiState.isSyncing,
+                    isOfflineMode = uiState.isOfflineMode,
                     modifier = Modifier
                 )
             },
@@ -204,21 +206,46 @@ private fun ShiftCodeContent(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        when {
-            uiState.isLoading -> LoadingState(screenSize)
-            uiState.error != null -> ErrorState(
-                error = uiState.error,
+        val contentKind = uiState.catalogContentKind()
+        when (contentKind) {
+            CatalogContentKind.LOADING -> LoadingState(screenSize)
+            CatalogContentKind.ERROR -> ErrorState(
+                error = uiState.error ?: "Unknown error occurred",
                 screenSize = screenSize,
                 onRetry = onRefresh
             )
-            uiState.shiftCodes.isEmpty() -> EmptyState(screenSize)
-            else -> ShiftCodeList(
-                uiState = uiState,
-                screenSize = screenSize,
-                onFilterChanged = onFilterChanged,
-                onGameFilterChanged = onGameFilterChanged,
-                onToggleRedemption = onToggleRedemption
-            )
+            CatalogContentKind.EMPTY,
+            CatalogContentKind.LIST -> {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (uiState.isOfflineMode) {
+                        OfflineSyncBanner(
+                            hasSavedCodes = uiState.shiftCodes.isNotEmpty(),
+                            onRetry = onRefresh,
+                            modifier = Modifier.padding(
+                                horizontal = if (screenSize.isExpanded) {
+                                    UiConstants.Spacing.LARGE
+                                } else {
+                                    UiConstants.Spacing.MEDIUM
+                                },
+                                vertical = UiConstants.Spacing.SMALL
+                            )
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (contentKind == CatalogContentKind.EMPTY) {
+                            EmptyState(screenSize)
+                        } else {
+                            ShiftCodeList(
+                                uiState = uiState,
+                                screenSize = screenSize,
+                                onFilterChanged = onFilterChanged,
+                                onGameFilterChanged = onGameFilterChanged,
+                                onToggleRedemption = onToggleRedemption
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 } 

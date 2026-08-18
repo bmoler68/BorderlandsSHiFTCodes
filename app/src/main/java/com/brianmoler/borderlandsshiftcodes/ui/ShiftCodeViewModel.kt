@@ -20,7 +20,20 @@ import kotlinx.coroutines.launch
 private const val TAG = "ShiftCodeViewModel"
 
 /**
+ * Which catalog body to show. Sync failures never map to [ERROR]; those use [isOfflineMode].
+ */
+enum class CatalogContentKind {
+    LOADING,
+    ERROR,
+    EMPTY,
+    LIST
+}
+
+/**
  * UI state for the SHiFT codes screen
+ *
+ * [error] is only for local catalog load failures. Remote sync failures set [isOfflineMode]
+ * instead so cached Room codes stay visible.
  */
 data class ShiftCodeUiState(
     val isLoading: Boolean = false,
@@ -37,6 +50,14 @@ data class ShiftCodeUiState(
     val showThemeDialog: Boolean = false,
     val isCompactView: Boolean = false
 )
+
+fun ShiftCodeUiState.catalogContentKind(): CatalogContentKind =
+    when {
+        isLoading -> CatalogContentKind.LOADING
+        shiftCodes.isNotEmpty() -> CatalogContentKind.LIST
+        error != null -> CatalogContentKind.ERROR
+        else -> CatalogContentKind.EMPTY
+    }
 
 /**
  * ViewModel for managing SHiFT codes data and UI state
@@ -257,16 +278,14 @@ class ShiftCodeViewModel : ViewModel() {
                     Log.w(TAG, "Sync failed: ${syncResult?.error}")
                     _uiState.value = _uiState.value.copy(
                         isSyncing = false,
-                        isOfflineMode = true,
-                        error = syncResult?.error ?: "Sync failed"
+                        isOfflineMode = true
                     )
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error syncing with remote data: ${e.message}")
                 _uiState.value = _uiState.value.copy(
                     isSyncing = false,
-                    isOfflineMode = true,
-                    error = e.message ?: "Sync error occurred"
+                    isOfflineMode = true
                 )
             }
         }

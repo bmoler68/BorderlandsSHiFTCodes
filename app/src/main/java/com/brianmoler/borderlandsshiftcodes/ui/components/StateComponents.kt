@@ -4,7 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Spacer
@@ -139,6 +141,54 @@ fun ErrorState(
                     Spacer(modifier = Modifier.width(UiConstants.Spacing.SMALL))
                     Text("Retry")
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Non-blocking banner when remote sync fails and Room remains the catalog source.
+ */
+@Composable
+fun OfflineSyncBanner(
+    hasSavedCodes: Boolean,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        ),
+        shape = RoundedCornerShape(UiConstants.CornerRadius.MEDIUM),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = UiConstants.Elevation.XS
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = UiConstants.Spacing.MEDIUM,
+                    end = UiConstants.Spacing.SMALL,
+                    top = UiConstants.Spacing.SMALL,
+                    bottom = UiConstants.Spacing.SMALL
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = if (hasSavedCodes) {
+                    "Couldn't refresh. Showing saved codes."
+                } else {
+                    "Couldn't refresh from the server."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onRetry) {
+                Text("Retry")
             }
         }
     }
